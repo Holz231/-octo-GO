@@ -13,6 +13,13 @@ Stand: Das Modell wird gerade erfasst. Diese Datei hält fest, was bisher festst
 | Automatisches Unterbewusstsein | automatisch | unbewusst |
 | Manuelle bewusste Intention | manuell | bewusst |
 
+Festgelegt:
+
+- Die Kombination „manuell + unbewusst“ gibt es im Modell bewusst nicht.
+- Die automatische bewusste Intention ist das, was von selbst ins Bewusstsein
+  tritt (Impulse, spontane Gedanken, Wünsche). Die manuelle bewusste Intention
+  ist das, was man willentlich lenkt.
+
 ## 2. Funktionen der Layer
 
 Noch offen.
