@@ -1,14 +1,14 @@
 """Dem Geistmodell zusehen.
 
     python -m geist          interaktiv: du bist die manuelle bewusste Intention
-    python -m geist --demo   fester Ablauf, der die drei Haltungen vergleicht
+    python -m geist --demo   fester Ablauf, der Haltungen und Quellen vergleicht
 """
 
 from __future__ import annotations
 
 import argparse
 
-from .modell import Geist, Haltung, Impuls, Moment
+from .modell import Erfahrung, Geist, Haltung, Lage, Moment
 
 BALKENBREITE = 20
 TASTEN = {"e": Haltung.ENGAGE, "d": Haltung.DISENGAGE, "w": Haltung.WEDER_NOCH}
@@ -16,76 +16,116 @@ TASTEN = {"e": Haltung.ENGAGE, "d": Haltung.DISENGAGE, "w": Haltung.WEDER_NOCH}
 
 def zeige(moment: Moment) -> None:
     print(f"\nMoment {moment.zeit}")
-    if not moment.impulse:
-        print("  (das Unterbewusstsein erzeugt gerade nichts)")
+    staerken = {i.thema: i.staerke for i in moment.impulse}
+    ausrichtungen = {a.thema: a for a in moment.ausrichtungen}
+    # Auch Themen zeigen, auf die sich die MBI richtet, ohne dass ein Impuls da ist.
+    themen = list(staerken) + [t for t in ausrichtungen if t not in staerken]
+    if not themen:
+        print("  (nichts)")
         return
-    bewusst = {i.thema for i in moment.aufgestiegen}
-    breite = max(len(i.thema) for i in moment.impulse)
-    print(f"  {'Thema':<{breite}}  {'Stärke':<{BALKENBREITE + 5}}  bewusst  Haltung")
-    for impuls in moment.impulse:
-        voll = round(impuls.staerke * BALKENBREITE)
+    im_feld = {i.thema for i in moment.feld}
+    breite = max(len("Thema"), *(len(t) for t in themen))
+    print(
+        f"  {'Thema':<{breite}}  {'Stärke im AUI':<{BALKENBREITE + 5}}"
+        f"  {'im Feld':<7}  {'MBI':<10}  gerichtet auf"
+    )
+    for thema in themen:
+        staerke = staerken.get(thema, 0.0)
+        voll = round(staerke * BALKENBREITE)
         balken = "█" * voll + "░" * (BALKENBREITE - voll)
-        haltung = moment.haltungen.get(impuls.thema)
+        a = ausrichtungen.get(thema)
         print(
-            f"  {impuls.thema:<{breite}}  {balken} {impuls.staerke:.2f}"
-            f"  {'ja' if impuls.thema in bewusst else 'nein':<7}"
-            f"  {haltung.value if haltung else '-'}"
+            f"  {thema:<{breite}}  {balken} {staerke:.2f}"
+            f"  {'ja' if thema in im_feld else 'nein':<7}"
+            f"  {a.haltung.value if a else '-':<10}  {a.quelle.value if a else '-'}"
         )
 
 
 def demo() -> None:
-    """Drei gleich starke Themen, jedes bekommt dauerhaft eine andere Haltung."""
-    haltung_je_thema = {
-        "Sorge": Haltung.ENGAGE,
-        "Ohrwurm": Haltung.WEDER_NOCH,
-        "Hunger": Haltung.DISENGAGE,
-    }
-    geist = Geist(lambda impuls: haltung_je_thema[impuls.thema])
-    zeige(geist.schritt({thema: 0.8 for thema in haltung_je_thema}))
-    for _ in range(7):
-        zeige(geist.schritt())
+    """Drei Haltungen und drei Quellen nebeneinander.
+
+    Sorge, Ohrwurm und Hunger stammen aus vorherigen Erfahrungen und sind sofort
+    im Feld. Der Atem ist ein schwacher sensorischer Eindruck, Urlaub ein frei
+    gewähltes Thema: Beide tauchen erst im Feld auf, nachdem sich die MBI ab
+    Moment 2 darauf gerichtet hat.
+    """
+
+    def entscheider(lage: Lage) -> dict[str, Haltung]:
+        im_feld = {impuls.thema for impuls in lage.feld}
+        haltungen = {}
+        if "Sorge" in im_feld:
+            haltungen["Sorge"] = Haltung.ENGAGE
+        if "Hunger" in im_feld:
+            haltungen["Hunger"] = Haltung.DISENGAGE
+        if geist.zeit >= 2:
+            haltungen["Atem"] = Haltung.ENGAGE
+            haltungen["Urlaub"] = Haltung.ENGAGE
+        return haltungen
+
+    geist = Geist(entscheider)
+    for thema in ("Sorge", "Ohrwurm", "Hunger"):
+        geist.unterbewusstsein.erlebe(Erfahrung(thema, 0.8, zeit=0))
+    for _ in range(6):
+        zeige(geist.schritt({"Atem": 0.05}))
 
 
-def frage_haltung(impuls: Impuls) -> Haltung:
+def lies_ausrichtung(text: str) -> dict[str, Haltung]:
+    """'e Sorge, d Musik' -> {'Sorge': ENGAGE, 'Musik': DISENGAGE}"""
+    haltungen: dict[str, Haltung] = {}
+    for teil in text.split(","):
+        if not teil.strip():
+            continue
+        taste, _, thema = teil.strip().partition(" ")
+        if taste.lower() not in TASTEN or not thema.strip():
+            raise ValueError(teil.strip())
+        haltungen[thema.strip()] = TASTEN[taste.lower()]
+    return haltungen
+
+
+def frage_ausrichtung(lage: Lage) -> dict[str, Haltung]:
+    feld = ", ".join(f"{i.thema} ({i.staerke:.2f})" for i in lage.feld)
+    sinne = ", ".join(f"{t} ({s:.2f})" for t, s in lage.sinne.items())
+    print(f"  Im Feld:  {feld or '-'}")
+    print(f"  Sinne:    {sinne or '-'}")
     while True:
-        antwort = input(
-            f"  '{impuls.thema}' steigt auf ({impuls.staerke:.2f}). "
-            "[e]ngage / [d]isengage / [w]eder noch? "
-        )
-        haltung = TASTEN.get(antwort.strip().lower()[:1])
-        if haltung:
-            return haltung
+        antwort = input("  Worauf richtest du dich? ")
+        try:
+            return lies_ausrichtung(antwort)
+        except ValueError as fehler:
+            print(f"  Nicht verstanden: '{fehler}'. Beispiel: e Sorge, d Musik")
 
 
-def lies_erfahrungen(text: str) -> dict[str, float]:
-    """'Hunger, Sorge=0.9' -> {'Hunger': 0.5, 'Sorge': 0.9}"""
-    erfahrungen: dict[str, float] = {}
+def lies_sinne(text: str) -> dict[str, float]:
+    """'Laerm, Atem=0.1' -> {'Laerm': 0.5, 'Atem': 0.1}"""
+    sinne: dict[str, float] = {}
     for teil in text.split(","):
         thema, _, staerke = teil.partition("=")
         if thema.strip():
-            erfahrungen[thema.strip()] = float(staerke) if staerke.strip() else 0.5
-    return erfahrungen
+            sinne[thema.strip()] = float(staerke) if staerke.strip() else 0.5
+    return sinne
 
 
 def interaktiv() -> None:
-    print("Du bist die manuelle bewusste Intention.")
-    print("Erfahrungen eingeben als 'Thema' oder 'Thema=Stärke' (0 bis 1), mehrere")
-    print("mit Komma. Leere Eingabe: nichts Neues erleben. 'q' beendet.")
-    geist = Geist(frage_haltung)
+    print("Du bist die manuelle bewusste Intention (MBI).")
+    print()
+    print("Jeder Moment hat zwei Eingaben:")
+    print("1. Sinne: 'Thema' oder 'Thema=Stärke' (0 bis 1), mehrere mit Komma.")
+    print("   Leer = keine Eindrücke, 'q' beendet.")
+    print("2. Ausrichtung: 'e Thema' (engage) oder 'd Thema' (disengage), mehrere")
+    print("   mit Komma. Das Thema darf aus dem Feld, aus den Sinnen oder frei")
+    print("   gewählt sein. Leer = weder noch.")
+    geist = Geist(frage_ausrichtung)
     while True:
         try:
-            eingabe = input("\nWas erlebst du gerade? ")
-        except EOFError:
-            break
-        if eingabe.strip().lower() == "q":
-            break
-        try:
-            erfahrungen = lies_erfahrungen(eingabe)
-        except ValueError:
-            print("  Stärke muss eine Zahl sein, zum Beispiel Sorge=0.9")
-            continue
-        try:
-            zeige(geist.schritt(erfahrungen))
+            eingabe = input("\nWas nehmen deine Sinne wahr? ")
+            if eingabe.strip().lower() == "q":
+                break
+            try:
+                sinne = lies_sinne(eingabe)
+            except ValueError:
+                print("  Stärke muss eine Zahl sein, zum Beispiel Atem=0.1")
+                continue
+            zeige(geist.schritt(sinne))
         except EOFError:
             break
 

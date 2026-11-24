@@ -1,13 +1,21 @@
 """Das Geistmodell: drei Layer und wie sie aufeinander wirken.
 
+Die Layer:
+
+- AUI: das automatische Unterbewusstsein
+- ABI: die automatische bewusste Intention
+- MBI: die manuelle bewusste Intention
+
 Ablauf eines Moments:
 
-1. Das Unterbewusstsein erzeugt Impulse aus vorherigen und jetzigen Erfahrungen.
-2. Ein Teil davon steigt auf und wird zur automatischen bewussten Intention.
-3. Die manuelle bewusste Intention nimmt zu jedem aufgestiegenen Impuls eine
-   Haltung ein: engage, disengage oder weder noch.
-4. Die Haltung wird selbst zur Erfahrung. Nur so, also indirekt über das
-   Aufgestiegene, erreicht die manuelle Intention das Unterbewusstsein.
+1. Das AUI erzeugt Impulse aus vorherigen und jetzigen Erfahrungen.
+2. Ein Teil davon taucht im Feld der ABI auf. Die Impulse werden dabei nicht
+   zur ABI, sie werden von ihr nur wahrgenommen.
+3. Die MBI richtet sich aus: auf ein beliebiges Thema, auf die jetzige
+   Erfahrung oder auf einen sensorischen Eindruck. Dazu nimmt sie eine Haltung
+   ein: engage, disengage oder weder noch.
+4. Die Haltung wird selbst zur Erfahrung. Nur so, also indirekt, erreicht die
+   MBI das AUI.
 """
 
 from __future__ import annotations
@@ -21,11 +29,19 @@ MINDESTSTAERKE = 0.01
 
 
 class Haltung(Enum):
-    """Was die manuelle bewusste Intention mit einem aufgestiegenen Impuls tut."""
+    """Was die MBI mit dem tut, worauf sie gerichtet ist."""
 
     ENGAGE = "engage"
     DISENGAGE = "disengage"
     WEDER_NOCH = "weder noch"  # "non disengage and non engage"
+
+
+class Quelle(Enum):
+    """Woher das stammt, worauf die MBI gerichtet ist."""
+
+    THEMENGEBIET = "Themengebiet"  # unendlich: jedes beliebige Thema
+    ERFAHRUNG = "jetzige Erfahrung"
+    SINNE = "Sinne"
 
 
 @dataclass(frozen=True)
@@ -41,17 +57,48 @@ class Impuls:
     staerke: float  # 0 bis 1
 
 
+@dataclass(frozen=True)
+class Lage:
+    """Alles, was der MBI zugänglich ist. Das AUI gehört nicht dazu."""
+
+    feld: tuple[Impuls, ...]  # was gerade im Feld der ABI auftaucht
+    sinne: Mapping[str, float]  # sensorische Eindrücke: Thema -> Stärke
+
+    def staerke(self, thema: str) -> float:
+        """Wie stark ein Thema gerade wahrnehmbar ist (0 = gar nicht)."""
+        for impuls in self.feld:
+            if impuls.thema == thema:
+                return impuls.staerke
+        return self.sinne.get(thema, 0.0)
+
+    def quelle(self, thema: str) -> Quelle:
+        if thema in self.sinne:
+            return Quelle.SINNE
+        if any(impuls.thema == thema for impuls in self.feld):
+            return Quelle.ERFAHRUNG
+        return Quelle.THEMENGEBIET
+
+
+@dataclass(frozen=True)
+class Ausrichtung:
+    """Worauf die MBI in einem Moment gerichtet ist und mit welcher Haltung."""
+
+    thema: str
+    quelle: Quelle
+    haltung: Haltung
+
+
 # ANNAHME (noch nicht vom Modell vorgegeben): wie stark eine Haltung als neue
-# Erfahrung auf das Thema zurückwirkt, als Anteil der Impulsstärke.
+# Erfahrung auf das Thema zurückwirkt.
 STANDARD_WIRKUNG: Mapping[Haltung, float] = {
-    Haltung.ENGAGE: 0.5,
-    Haltung.DISENGAGE: -0.5,
+    Haltung.ENGAGE: 0.4,
+    Haltung.DISENGAGE: -0.4,
     Haltung.WEDER_NOCH: 0.0,
 }
 
 
 class Unterbewusstsein:
-    """Automatisch und unbewusst: läuft ständig und erzeugt Impulse."""
+    """AUI. Automatisch und unbewusst: läuft ständig und erzeugt Impulse."""
 
     def __init__(self, nachklang: float = 0.8):
         # ANNAHME: Eine Erfahrung wirkt pro Moment um diesen Faktor schwächer nach.
@@ -76,32 +123,41 @@ class Unterbewusstsein:
 
 
 class AutomatischeBewussteIntention:
-    """Automatisch und bewusst: was von selbst ins Bewusstsein tritt."""
+    """ABI. Automatisch und bewusst: ein Feld, in dem auftaucht, was das AUI erzeugt.
+
+    Die Impulse bleiben Impulse des AUI. Die ABI nimmt sie nur wahr.
+    """
 
     def __init__(self, schwelle: float = 0.3):
-        # ANNAHME: Es steigt auf, was mindestens so stark ist wie die Schwelle.
+        # ANNAHME: Im Feld taucht auf, was mindestens so stark ist wie die Schwelle.
         self.schwelle = schwelle
-        self.inhalt: list[Impuls] = []
+        self.feld: list[Impuls] = []
 
-    def lasse_aufsteigen(self, impulse: list[Impuls]) -> list[Impuls]:
-        self.inhalt = [i for i in impulse if i.staerke >= self.schwelle]
-        return self.inhalt
+    def nimm_wahr(self, impulse: list[Impuls]) -> list[Impuls]:
+        self.feld = [i for i in impulse if i.staerke >= self.schwelle]
+        return self.feld
 
 
-Entscheider = Callable[[Impuls], Haltung]
+# Bekommt die Lage und gibt zurück, worauf sich die MBI wie richtet:
+# Thema -> Haltung. Alles, was nicht genannt wird, bleibt bei "weder noch".
+Entscheider = Callable[[Lage], Mapping[str, Haltung]]
 
 
 class ManuelleBewussteIntention:
-    """Manuell und bewusst: was man willentlich lenkt.
+    """MBI. Manuell und bewusst: was man willentlich lenkt.
 
-    Sie bekommt nur zu sehen, was aufgestiegen ist, nie das Unterbewusstsein.
+    Sie kann sich auf jedes beliebige Thema richten, auf die jetzige Erfahrung
+    oder auf sensorische Eindrücke. Das AUI selbst bekommt sie nie zu sehen.
     """
 
     def __init__(self, entscheider: Entscheider):
         self.entscheider = entscheider
 
-    def nimm_haltung_ein(self, aufgestiegen: list[Impuls]) -> dict[str, Haltung]:
-        return {impuls.thema: self.entscheider(impuls) for impuls in aufgestiegen}
+    def richte_aus(self, lage: Lage) -> list[Ausrichtung]:
+        return [
+            Ausrichtung(thema, lage.quelle(thema), haltung)
+            for thema, haltung in self.entscheider(lage).items()
+        ]
 
 
 @dataclass(frozen=True)
@@ -109,9 +165,10 @@ class Moment:
     """Was in einem Zeitschritt in den drei Layern passiert ist."""
 
     zeit: int
-    impulse: tuple[Impuls, ...]  # alles, was das Unterbewusstsein erzeugt hat
-    aufgestiegen: tuple[Impuls, ...]  # der Teil, der bewusst wurde
-    haltungen: Mapping[str, Haltung]  # Thema -> Haltung der manuellen Intention
+    sinne: Mapping[str, float]  # sensorische Eindrücke dieses Moments
+    impulse: tuple[Impuls, ...]  # alles, was das AUI erzeugt hat
+    feld: tuple[Impuls, ...]  # der Teil, der im Feld der ABI aufgetaucht ist
+    ausrichtungen: tuple[Ausrichtung, ...]  # worauf sich die MBI gerichtet hat
 
 
 class Geist:
@@ -131,22 +188,28 @@ class Geist:
         self.wirkung = wirkung
         self.zeit = 0
 
-    def schritt(self, jetzt: Mapping[str, float] | None = None) -> Moment:
-        """Ein Moment. `jetzt` sind die jetzigen Erfahrungen: Thema -> Stärke."""
-        for thema, staerke in (jetzt or {}).items():
+    def schritt(self, sinne: Mapping[str, float] | None = None) -> Moment:
+        """Ein Moment. `sinne` sind die sensorischen Eindrücke: Thema -> Stärke."""
+        sinne = dict(sinne or {})
+        # ANNAHME: Sensorische Eindrücke sind jetzige Erfahrung und gehen ins AUI.
+        for thema, staerke in sinne.items():
             self.unterbewusstsein.erlebe(Erfahrung(thema, staerke, self.zeit))
 
         impulse = self.unterbewusstsein.erzeuge_impulse(self.zeit)
-        aufgestiegen = self.automatisch.lasse_aufsteigen(impulse)
-        haltungen = self.manuell.nimm_haltung_ein(aufgestiegen)
+        feld = self.automatisch.nimm_wahr(impulse)
+        lage = Lage(tuple(feld), sinne)
+        ausrichtungen = self.manuell.richte_aus(lage)
 
-        for impuls in aufgestiegen:
-            wirkung = self.wirkung[haltungen[impuls.thema]]
+        for ausrichtung in ausrichtungen:
+            wirkung = self.wirkung[ausrichtung.haltung]
+            if wirkung < 0:
+                # Lösen kann man sich nur so weit, wie etwas wahrnehmbar ist.
+                wirkung = max(wirkung, -lage.staerke(ausrichtung.thema))
             if wirkung:
                 self.unterbewusstsein.erlebe(
-                    Erfahrung(impuls.thema, wirkung * impuls.staerke, self.zeit)
+                    Erfahrung(ausrichtung.thema, wirkung, self.zeit)
                 )
 
-        moment = Moment(self.zeit, tuple(impulse), tuple(aufgestiegen), haltungen)
+        moment = Moment(self.zeit, sinne, tuple(impulse), lage.feld, tuple(ausrichtungen))
         self.zeit += 1
         return moment

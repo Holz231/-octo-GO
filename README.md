@@ -8,7 +8,7 @@ welche Lücken das Programm vorläufig mit eigenen Annahmen füllt.
 
 ## Ausprobieren
 
-    python -m geist --demo   # fester Ablauf: die drei Haltungen im Vergleich
+    python -m geist --demo   # fester Ablauf: Haltungen und Quellen im Vergleich
     python -m geist          # interaktiv: du bist die manuelle bewusste Intention
     python -m pytest         # Tests
 
@@ -16,37 +16,35 @@ Braucht nur Python 3.10 oder neuer, für die Tests zusätzlich pytest.
 
 ## 1. Fundamentale Layer des Geistes
 
-| Layer | Steuerung | Bewusstheit |
-|---|---|---|
-| Automatische bewusste Intention | automatisch | bewusst |
-| Automatisches Unterbewusstsein | automatisch | unbewusst |
-| Manuelle bewusste Intention | manuell | bewusst |
+| Kürzel | Layer | Steuerung | Bewusstheit |
+|---|---|---|---|
+| AUI | Automatisches Unterbewusstsein | automatisch | unbewusst |
+| ABI | Automatische bewusste Intention | automatisch | bewusst |
+| MBI | Manuelle bewusste Intention | manuell | bewusst |
 
-Festgelegt:
-
-- Die Kombination „manuell + unbewusst“ gibt es im Modell bewusst nicht.
-- Die automatische bewusste Intention ist das, was von selbst ins Bewusstsein
-  tritt (Impulse, spontane Gedanken, Wünsche). Die manuelle bewusste Intention
-  ist das, was man willentlich lenkt.
+Die Kombination „manuell + unbewusst“ gibt es im Modell bewusst nicht.
 
 ## 2. Funktionen und Beziehungen
 
 Festgelegt:
 
-1. Das Unterbewusstsein läuft ständig im Hintergrund und erzeugt Impulse,
-   Gedanken und Wünsche, und zwar aufgrund von vorherigen und jetzigen
-   Erfahrungen.
-2. Ein Teil davon steigt auf und wird zur automatischen bewussten Intention.
-   Sie ist das Fenster, durch das das Unterbewusstsein sichtbar wird.
-3. Die manuelle bewusste Intention nimmt zu dem, was aufgestiegen ist, eine von
-   drei Haltungen ein: **engage**, **disengage** oder **weder noch**
+1. Das AUI läuft ständig im Hintergrund und erzeugt Impulse, Gedanken und
+   Wünsche, und zwar aufgrund von vorherigen und jetzigen Erfahrungen.
+2. Die ABI ist ein Feld. Ein Teil dessen, was das AUI erzeugt, taucht in diesem
+   Feld auf und wird von der ABI wahrgenommen. Es wird dabei nicht selbst zur
+   ABI.
+3. Die MBI kann sich auf drei Arten von Zielen richten:
+   - auf ein Thema aus einem unendlichen Themengebiet, also auf Beliebiges,
+   - auf die jetzige Erfahrung,
+   - auf sensorische Eindrücke.
+4. Zu dem, worauf sie gerichtet ist, nimmt die MBI eine von drei Haltungen ein:
+   **engage**, **disengage** oder **weder noch**
    („non disengage and non engage“).
-4. Die manuelle Intention hat keinen direkten Zugriff auf das Unterbewusstsein.
-   Sie erreicht es nur indirekt über die automatische bewusste Intention.
+5. Die MBI hat keinen direkten Zugriff auf das AUI. Sie erreicht es nur
+   indirekt.
 
-Bewusst zurückgestellt: Grenzen der manuellen Intention (Aufmerksamkeit,
-Energie), Gewohnheitsbildung, weitere Bausteine wie Wahrnehmung, Emotion,
-Erinnerung oder Körper.
+Bewusst zurückgestellt: Grenzen der MBI (Aufmerksamkeit, Energie),
+Gewohnheitsbildung, weitere Bausteine wie Emotion, Erinnerung oder Körper.
 
 ## 3. Vorläufige Annahmen im Programm
 
@@ -55,9 +53,14 @@ zu laufen. Sie stehen in `geist/modell.py` und sind dort mit `ANNAHME` markiert.
 
 - **Was eine Haltung bewirkt:** Die Haltung wird selbst zur Erfahrung und wirkt
   so auf spätere Impulse zurück. Engage stärkt das Thema, disengage schwächt
-  es, weder noch hinterlässt keine Spur.
-- **Welcher Teil aufsteigt:** alles, was mindestens so stark ist wie eine feste
-  Schwelle (0,3).
+  es, weder noch hinterlässt keine Spur. Lösen kann man sich nur von etwas,
+  das gerade wahrnehmbar ist.
+- **Was „jetzige Erfahrung“ heißt:** das, was gerade im Feld der ABI auftaucht.
+- **Wohin sensorische Eindrücke gehen:** Sie sind jetzige Erfahrung und gehen
+  ins AUI. Starke tauchen dadurch sofort im Feld auf, schwache erst, wenn sich
+  die MBI auf sie richtet.
+- **Welcher Teil im Feld auftaucht:** alles, was mindestens so stark ist wie
+  eine feste Schwelle (0,3).
 - **Wie Erfahrungen nachwirken:** Jede Erfahrung klingt pro Moment um den
   Faktor 0,8 ab.
 - **Themen:** Erfahrungen und Impulse haben ein Thema (ein Wort) und eine
