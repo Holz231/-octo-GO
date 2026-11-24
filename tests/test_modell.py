@@ -255,27 +255,52 @@ def test_schwacher_sinneseindruck_kommt_durch_engage_ins_feld():
     assert im_feld(mit.schritt({"Atem": 0.05})) == ["Atem"]
 
 
-# --- Die jetzige Erfahrung als Gebiet ---
+# --- Die jetzige Erfahrung als Gebiet: alles, was im Feld der ABI auftaucht ---
 
 
-def test_in_der_jetzigen_erfahrung_zaehlt_voll_was_jetzt_erlebt_wird():
-    geist = geist_mit(gebiet=JETZIGE_ERFAHRUNG, nachklang=1.0)
-
-    (jetzt,) = geist.schritt({"Klang": 0.6}).aui_feld
-    (danach,) = geist.schritt().aui_feld
-
-    assert (jetzt.staerke, jetzt.mitgebracht_aus) == (0.6, ())
-    assert (danach.staerke, danach.mitgebracht_aus) == (0.3, (SINNE,))
-
-
-def test_in_der_jetzigen_erfahrung_ist_alles_fruehere_mitgebracht():
+def test_was_im_abi_feld_auftaucht_zaehlt_in_der_jetzigen_erfahrung_voll():
+    plan = {0: Entscheidung(gebiet="Arbeit"), 1: Entscheidung(gebiet=JETZIGE_ERFAHRUNG)}
     geist = geist_mit(
-        immer(Haltung.ENGAGE, "Gedanke"),
-        JETZIGE_ERFAHRUNG,
-        [erfahrung("Sorge", 0.8, "Familie", zeit=-1)],
+        nach_plan(plan),
+        "Familie",
+        [erfahrung("Sorge", 0.8, "Familie")],
         nachklang=1.0,
     )
-    geist.schritt()
-    herkunft = {i.thema: i.mitgebracht_aus for i in geist.schritt().aui_feld}
+    daheim, in_der_arbeit, jetzt = (geist.schritt().aui_feld[0] for _ in range(3))
 
-    assert herkunft == {"Sorge": ("Familie",), "Gedanke": ("früher",)}
+    assert (daheim.staerke, daheim.mitgebracht_aus) == (0.8, ())
+    assert (in_der_arbeit.staerke, in_der_arbeit.mitgebracht_aus) == (0.4, ("Familie",))
+    # Die Sorge taucht im Feld der ABI auf, also gehört sie zur jetzigen Erfahrung.
+    assert (jetzt.staerke, jetzt.mitgebracht_aus) == (0.8, ())
+
+
+def test_was_nicht_im_abi_feld_auftaucht_wird_nur_mitgefuehrt():
+    geist = geist_mit(
+        gebiet=JETZIGE_ERFAHRUNG,
+        erfahrungen=[erfahrung("Leise", 0.4, "Familie")],
+        nachklang=1.0,
+    )
+    for _ in range(2):
+        moment = geist.schritt()
+        (leise,) = moment.aui_feld
+        assert moment.abi_feld == ()
+        assert (leise.staerke, leise.mitgebracht_aus) == (0.2, ("Familie",))
+
+
+def test_was_aus_dem_abi_feld_verschwindet_zaehlt_nicht_mehr_voll():
+    geist = geist_mit(
+        nach_plan({0: Entscheidung(gebiet=JETZIGE_ERFAHRUNG)}),
+        erfahrungen=[erfahrung("Thema", 0.5)],
+        nachklang=0.5,
+        schwelle=0.2,
+    )
+    verlauf = [staerke(geist.schritt(), "Thema") for _ in range(4)]
+    # 0.125 liegt unter der Schwelle: Ab da wird das Thema nur noch mitgeführt.
+    assert verlauf == [0.5, 0.25, 0.125, 0.03125]
+
+
+def test_haltung_in_der_jetzigen_erfahrung_zu_nicht_auftauchendem_thema():
+    geist = geist_mit(immer(Haltung.ENGAGE, "Gedanke"), JETZIGE_ERFAHRUNG, nachklang=1.0)
+    geist.schritt()
+    (gedanke,) = geist.schritt().aui_feld
+    assert (gedanke.staerke, gedanke.mitgebracht_aus) == (0.2, ("früher",))

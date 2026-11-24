@@ -37,7 +37,7 @@ Festgelegt:
 3. Die MBI bewegt sich immer in einem bestimmten Gebiet. Es gibt drei Arten
    von Gebieten:
    - ein Themengebiet (davon gibt es unendlich viele, etwa Familie oder Arbeit),
-   - die jetzige Erfahrung,
+   - die jetzige Erfahrung: alles, was im Feld der ABI auftaucht,
    - die sensorischen Eindrücke.
 4. An dem Gebiet, in dem sich die MBI bewegt, orientieren sich ABI und AUI.
 5. Das AUI führt vergangene Themen und Erfahrungen mit sich in neue Gebiete,
@@ -65,8 +65,10 @@ Zu den Gebieten:
 - **Was zu den Sinnen gehört:** jeder sensorische Eindruck, egal in welchem
   Gebiet sich die MBI gerade bewegt. Starke Eindrücke tauchen deshalb überall
   im Feld der ABI auf, schwache nur, wenn die MBI in den Sinnen ist.
-- **Was zur jetzigen Erfahrung gehört:** das, was in diesem Moment erlebt wird.
-  Alles Frühere ist vergangen und wird nur mitgeführt.
+- **Woran sich „taucht im Feld der ABI auf“ bemisst:** am Feld, wie es zu
+  Beginn des Moments ist, also am Ergebnis des vorigen Moments. Was dort
+  auftaucht, zählt in der jetzigen Erfahrung voll, egal aus welchem Gebiet es
+  stammt. Alles andere wird mit halber Stärke mitgeführt.
 - **Was zu einem Themengebiet gehört:** die Haltungen, die die MBI dort
   eingenommen hat.
 - **Was die wahrgenommene Realität ist:** das Feld der ABI.

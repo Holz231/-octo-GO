@@ -73,9 +73,9 @@ def demo_gebiete() -> None:
     Die Sorge stammt aus dem Themengebiet Familie, der Atem ist ein schwacher
     Sinneseindruck. In der Familie ist nur die Sorge im Feld der ABI. In den
     Sinnen zählt der Atem voll, und die Sorge kommt abgeschwächt mit. In der
-    jetzigen Erfahrung zählt nur, was in diesem Moment erlebt wird: Alles
-    Frühere ist mitgebracht. Zurück in der Familie ist die Sorge wieder da, und
-    jetzt ist es der Atem, der mitgebracht wird.
+    jetzigen Erfahrung zählt alles voll, was im Feld der ABI auftaucht, egal
+    woher es stammt: Die Sorge ist dort wieder stärker als in den Sinnen.
+    Zurück in der Familie ist es der Atem, der mitgebracht wird.
     """
     ablauf = {
         0: Entscheidung({"Sorge": Haltung.ENGAGE}, gebiet=SINNE),
