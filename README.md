@@ -30,9 +30,9 @@ Festgelegt:
 
 1. Das AUI läuft ständig im Hintergrund und erzeugt Impulse, Gedanken und
    Wünsche, und zwar aufgrund von vorherigen und jetzigen Erfahrungen.
-2. Die ABI ist ein Feld. Ein Teil dessen, was das AUI erzeugt, taucht in diesem
-   Feld auf und wird von der ABI wahrgenommen. Es wird dabei nicht selbst zur
-   ABI.
+2. AUI und ABI sind zwei verschiedene Felder, die aneinander angrenzen. Ein
+   Teil dessen, was das AUI erzeugt, taucht im Feld der ABI auf und wird von ihr
+   wahrgenommen. Es wird dabei nicht selbst zur ABI.
 3. Die MBI kann sich auf drei Arten von Zielen richten:
    - auf ein Thema aus einem unendlichen Themengebiet, also auf Beliebiges,
    - auf die jetzige Erfahrung,
@@ -59,8 +59,11 @@ zu laufen. Sie stehen in `geist/modell.py` und sind dort mit `ANNAHME` markiert.
 - **Wohin sensorische Eindrücke gehen:** Sie sind jetzige Erfahrung und gehen
   ins AUI. Starke tauchen dadurch sofort im Feld auf, schwache erst, wenn sich
   die MBI auf sie richtet.
-- **Welcher Teil im Feld auftaucht:** alles, was mindestens so stark ist wie
-  eine feste Schwelle (0,3).
+- **Welcher Teil im Feld der ABI auftaucht:** alles, was mindestens so stark
+  ist wie eine feste Schwelle (0,3). Die Schwelle ist die Grenze zwischen den
+  beiden Feldern.
+- **Ob etwas in beiden Feldern zugleich ist:** Ja. Was im Feld der ABI
+  auftaucht, liegt weiterhin auch im Feld des AUI.
 - **Wie Erfahrungen nachwirken:** Jede Erfahrung klingt pro Moment um den
   Faktor 0,8 ab.
 - **Themen:** Erfahrungen und Impulse haben ein Thema (ein Wort) und eine

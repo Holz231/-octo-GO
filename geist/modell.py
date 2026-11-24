@@ -8,9 +8,12 @@ Die Layer:
 
 Ablauf eines Moments:
 
-1. Das AUI erzeugt Impulse aus vorherigen und jetzigen Erfahrungen.
-2. Ein Teil davon taucht im Feld der ABI auf. Die Impulse werden dabei nicht
-   zur ABI, sie werden von ihr nur wahrgenommen.
+AUI und ABI sind zwei verschiedene, aneinander angrenzende Felder.
+
+1. Das AUI erzeugt Impulse aus vorherigen und jetzigen Erfahrungen. Sie liegen
+   im Feld des AUI.
+2. Ein Teil davon taucht im angrenzenden Feld der ABI auf. Die Impulse werden
+   dabei nicht zur ABI, sie werden von ihr nur wahrgenommen.
 3. Die MBI richtet sich aus: auf ein beliebiges Thema, auf die jetzige
    Erfahrung oder auf einen sensorischen Eindruck. Dazu nimmt sie eine Haltung
    ein: engage, disengage oder weder noch.
@@ -61,12 +64,12 @@ class Impuls:
 class Lage:
     """Alles, was der MBI zugänglich ist. Das AUI gehört nicht dazu."""
 
-    feld: tuple[Impuls, ...]  # was gerade im Feld der ABI auftaucht
+    abi_feld: tuple[Impuls, ...]  # was gerade im Feld der ABI auftaucht
     sinne: Mapping[str, float]  # sensorische Eindrücke: Thema -> Stärke
 
     def staerke(self, thema: str) -> float:
         """Wie stark ein Thema gerade wahrnehmbar ist (0 = gar nicht)."""
-        for impuls in self.feld:
+        for impuls in self.abi_feld:
             if impuls.thema == thema:
                 return impuls.staerke
         return self.sinne.get(thema, 0.0)
@@ -74,7 +77,7 @@ class Lage:
     def quelle(self, thema: str) -> Quelle:
         if thema in self.sinne:
             return Quelle.SINNE
-        if any(impuls.thema == thema for impuls in self.feld):
+        if any(impuls.thema == thema for impuls in self.abi_feld):
             return Quelle.ERFAHRUNG
         return Quelle.THEMENGEBIET
 
@@ -98,18 +101,22 @@ STANDARD_WIRKUNG: Mapping[Haltung, float] = {
 
 
 class Unterbewusstsein:
-    """AUI. Automatisch und unbewusst: läuft ständig und erzeugt Impulse."""
+    """AUI. Automatisch und unbewusst: läuft ständig und erzeugt Impulse.
+
+    Die Impulse liegen in seinem Feld, das an das Feld der ABI angrenzt.
+    """
 
     def __init__(self, nachklang: float = 0.8):
         # ANNAHME: Eine Erfahrung wirkt pro Moment um diesen Faktor schwächer nach.
         self.nachklang = nachklang
         self.erfahrungen: list[Erfahrung] = []
+        self.feld: list[Impuls] = []
 
     def erlebe(self, erfahrung: Erfahrung) -> None:
         self.erfahrungen.append(erfahrung)
 
     def erzeuge_impulse(self, zeit: int) -> list[Impuls]:
-        """Impulse aus allen bisherigen Erfahrungen, stärkster zuerst."""
+        """Füllt das Feld mit Impulsen aus allen Erfahrungen, stärkster zuerst."""
         summen: dict[str, float] = {}
         for e in self.erfahrungen:
             gewicht = self.nachklang ** (zeit - e.zeit)
@@ -119,22 +126,24 @@ class Unterbewusstsein:
             for thema, summe in summen.items()
             if summe >= MINDESTSTAERKE
         ]
-        return sorted(impulse, key=lambda i: i.staerke, reverse=True)
+        self.feld = sorted(impulse, key=lambda i: i.staerke, reverse=True)
+        return self.feld
 
 
 class AutomatischeBewussteIntention:
-    """ABI. Automatisch und bewusst: ein Feld, in dem auftaucht, was das AUI erzeugt.
+    """ABI. Automatisch und bewusst: ein eigenes Feld, das an das des AUI angrenzt.
 
-    Die Impulse bleiben Impulse des AUI. Die ABI nimmt sie nur wahr.
+    Was im Feld des AUI stark genug ist, taucht auch hier auf. Die Impulse
+    bleiben Impulse des AUI. Die ABI nimmt sie nur wahr.
     """
 
     def __init__(self, schwelle: float = 0.3):
-        # ANNAHME: Im Feld taucht auf, was mindestens so stark ist wie die Schwelle.
+        # ANNAHME: Über die Grenze reicht, was mindestens so stark ist wie die Schwelle.
         self.schwelle = schwelle
         self.feld: list[Impuls] = []
 
-    def nimm_wahr(self, impulse: list[Impuls]) -> list[Impuls]:
-        self.feld = [i for i in impulse if i.staerke >= self.schwelle]
+    def nimm_wahr(self, aui_feld: list[Impuls]) -> list[Impuls]:
+        self.feld = [i for i in aui_feld if i.staerke >= self.schwelle]
         return self.feld
 
 
@@ -166,8 +175,8 @@ class Moment:
 
     zeit: int
     sinne: Mapping[str, float]  # sensorische Eindrücke dieses Moments
-    impulse: tuple[Impuls, ...]  # alles, was das AUI erzeugt hat
-    feld: tuple[Impuls, ...]  # der Teil, der im Feld der ABI aufgetaucht ist
+    aui_feld: tuple[Impuls, ...]  # alles, was im Feld des AUI liegt
+    abi_feld: tuple[Impuls, ...]  # der Teil, der auch im Feld der ABI auftaucht
     ausrichtungen: tuple[Ausrichtung, ...]  # worauf sich die MBI gerichtet hat
 
 
@@ -195,9 +204,9 @@ class Geist:
         for thema, staerke in sinne.items():
             self.unterbewusstsein.erlebe(Erfahrung(thema, staerke, self.zeit))
 
-        impulse = self.unterbewusstsein.erzeuge_impulse(self.zeit)
-        feld = self.automatisch.nimm_wahr(impulse)
-        lage = Lage(tuple(feld), sinne)
+        aui_feld = self.unterbewusstsein.erzeuge_impulse(self.zeit)
+        abi_feld = self.automatisch.nimm_wahr(aui_feld)
+        lage = Lage(tuple(abi_feld), sinne)
         ausrichtungen = self.manuell.richte_aus(lage)
 
         for ausrichtung in ausrichtungen:
@@ -210,6 +219,8 @@ class Geist:
                     Erfahrung(ausrichtung.thema, wirkung, self.zeit)
                 )
 
-        moment = Moment(self.zeit, sinne, tuple(impulse), lage.feld, tuple(ausrichtungen))
+        moment = Moment(
+            self.zeit, sinne, tuple(aui_feld), lage.abi_feld, tuple(ausrichtungen)
+        )
         self.zeit += 1
         return moment

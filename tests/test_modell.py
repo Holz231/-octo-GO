@@ -10,22 +10,22 @@ def immer(haltung, thema="Thema"):
 
 
 def staerke(moment, thema):
-    return next((i.staerke for i in moment.impulse if i.thema == thema), 0.0)
+    return next((i.staerke for i in moment.aui_feld if i.thema == thema), 0.0)
 
 
 def im_feld(moment):
-    return [i.thema for i in moment.feld]
+    return [i.thema for i in moment.abi_feld]
 
 
 def test_ohne_erfahrung_kein_impuls():
-    assert Geist(nichts).schritt().impulse == ()
+    assert Geist(nichts).schritt().aui_feld == ()
 
 
 def test_impulse_entstehen_aus_vorherigen_und_jetzigen_erfahrungen():
     geist = Geist(nichts)
     geist.unterbewusstsein.erlebe(Erfahrung("Frueher", 0.6, zeit=0))
     moment = geist.schritt({"Jetzt": 0.6})
-    assert {i.thema for i in moment.impulse} == {"Frueher", "Jetzt"}
+    assert {i.thema for i in moment.aui_feld} == {"Frueher", "Jetzt"}
 
 
 def test_erfahrungen_klingen_nach_und_werden_schwaecher():
@@ -35,11 +35,18 @@ def test_erfahrungen_klingen_nach_und_werden_schwaecher():
     assert unterbewusstsein.erzeuge_impulse(zeit=1)[0].staerke == 0.4
 
 
+def test_aui_und_abi_sind_zwei_felder():
+    geist = Geist(nichts, schwelle=0.3)
+    geist.schritt({"Stark": 0.9, "Schwach": 0.1})
+    assert [i.thema for i in geist.unterbewusstsein.feld] == ["Stark", "Schwach"]
+    assert [i.thema for i in geist.automatisch.feld] == ["Stark"]
+
+
 def test_nur_ein_teil_taucht_im_feld_auf():
     geist = Geist(nichts, schwelle=0.3)
     moment = geist.schritt({"Stark": 0.9, "Schwach": 0.1})
     assert im_feld(moment) == ["Stark"]
-    assert {i.thema for i in moment.impulse} == {"Stark", "Schwach"}
+    assert {i.thema for i in moment.aui_feld} == {"Stark", "Schwach"}
 
 
 def test_mbi_sieht_feld_und_sinne_aber_nicht_das_unterbewusstsein():
@@ -54,7 +61,7 @@ def test_mbi_sieht_feld_und_sinne_aber_nicht_das_unterbewusstsein():
     geist.schritt({"Laut": 0.9, "Leise": 0.1})
 
     (lage,) = lagen
-    assert [i.thema for i in lage.feld] == ["Laut"]
+    assert [i.thema for i in lage.abi_feld] == ["Laut"]
     assert dict(lage.sinne) == {"Laut": 0.9, "Leise": 0.1}
     assert lage.staerke("Verborgen") == 0.0
 
@@ -122,5 +129,5 @@ def test_disengagtes_verschwindet_aus_dem_feld():
     geist = Geist(immer(Haltung.DISENGAGE), schwelle=0.3)
     geist.schritt({"Thema": 0.8})
     momente = [geist.schritt() for _ in range(5)]
-    assert momente[-1].feld == ()
+    assert momente[-1].abi_feld == ()
     assert staerke(momente[-1], "Thema") == 0.0
