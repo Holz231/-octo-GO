@@ -8,10 +8,13 @@ welche Lücken das Programm vorläufig mit eigenen Annahmen füllt.
 
 ## Ausprobieren
 
-    python -m geist --demo             # wie das AUI Themen in neue Gebiete mitführt
-    python -m geist --demo haltungen   # die drei Haltungen im Vergleich
+    python -m geist --demo             # die drei Haltungen im Vergleich
+    python -m geist --demo gebiete     # wie das AUI Themen in neue Gebiete mitführt
     python -m geist                    # interaktiv: du bist die MBI
     python -m pytest                   # Tests
+
+Mit `--mehrere` hält die MBI mehrere Gebiete zugleich statt nur eines. Das geht
+bei den Demos und im interaktiven Modus.
 
 Braucht nur Python 3.10 oder neuer, für die Tests zusätzlich pytest.
 
@@ -44,8 +47,16 @@ Festgelegt:
    auf die sich die MBI richtet.
 6. Wie die MBI und das AUI gerade sind, formt gleichzeitig die wahrgenommene
    Realität der ABI.
-7. Die MBI nimmt eine von drei Haltungen ein: **engage**, **disengage** oder
-   **weder noch** („non disengage and non engage“).
+7. Die MBI nimmt zu einem Thema eine von drei Haltungen ein:
+   - **engage** verstärkt das Thema im AUI. Zugleich macht die MBI es zu einem
+     neuen Themengebiet, in dem sie agiert: parallel zum bisherigen oder
+     allein, je nachdem, ob die MBI mehrere Themen zugleich hat oder nur eines.
+   - **disengage** schwächt das Thema im AUI und verhindert, dass die MBI es zu
+     einem neuen Themengebiet in der ABI macht.
+   - **weder noch** („non disengage and non engage“) verstärkt nicht und
+     schwächt nicht. Es bringt aber die Chance mit, dass das Thema ohne die MBI
+     aus dem AUI in die ABI geht und dort ohne die MBI zu einem neuen
+     Themengebiet wird. Oder eben nicht, dann verblasst es wieder.
 8. Die MBI hat keinen direkten Zugriff auf das AUI. Sie erreicht es nur
    indirekt.
 
@@ -57,31 +68,45 @@ Gewohnheitsbildung, weitere Bausteine wie Emotion, Erinnerung oder Körper.
 Diese Punkte gibt das Modell noch nicht vor. Das Programm braucht sie aber, um
 zu laufen. Sie stehen in `geist/modell.py` und sind dort mit `ANNAHME` markiert.
 
-Zu den Gebieten:
-
-- **Wie sich das AUI am Gebiet orientiert:** Erfahrungen aus dem Gebiet, in dem
-  sich die MBI gerade bewegt, zählen voll. Erfahrungen aus anderen Gebieten
-  kommen mit halber Stärke mit.
-- **Was zu den Sinnen gehört:** jeder sensorische Eindruck, egal in welchem
-  Gebiet sich die MBI gerade bewegt. Starke Eindrücke tauchen deshalb überall
-  im Feld der ABI auf, schwache nur, wenn die MBI in den Sinnen ist.
-- **Woran sich „taucht im Feld der ABI auf“ bemisst:** am Feld, wie es zu
-  Beginn des Moments ist, also am Ergebnis des vorigen Moments. Was dort
-  auftaucht, zählt in der jetzigen Erfahrung voll, egal aus welchem Gebiet es
-  stammt. Alles andere wird mit halber Stärke mitgeführt.
-- **Was zu einem Themengebiet gehört:** die Haltungen, die die MBI dort
-  eingenommen hat.
-- **Was die wahrgenommene Realität ist:** das Feld der ABI.
-- **Wann ein Gebietswechsel gilt:** ab dem nächsten Moment.
-
 Zu den Haltungen:
 
-- **Wozu die MBI eine Haltung einnimmt:** zu einzelnen Themen, während sie sich
-  in einem Gebiet bewegt. Das Thema ist frei wählbar.
-- **Was eine Haltung bewirkt:** Die Haltung wird selbst zur Erfahrung und wirkt
-  so auf spätere Impulse zurück. Engage stärkt das Thema, disengage schwächt
-  es, weder noch hinterlässt keine Spur. Lösen kann man sich nur von etwas,
-  das gerade wahrnehmbar ist.
+- **Wie stark engage und disengage wirken:** um einen festen Betrag (0,4), als
+  neue Erfahrung im AUI. Lösen kann man sich nur von etwas, das gerade
+  wahrnehmbar ist.
+- **Mehrere oder eines:** Ob die MBI mehrere Gebiete zugleich hält, ist eine
+  Einstellung von außen (`--mehrere`), keine Entscheidung im einzelnen Moment.
+- **Disengage beendet ein Gebiet:** Ist das Thema schon ein Themengebiet der
+  MBI, hört es durch disengage auf, eines zu sein.
+- **Ohne eigenes Gebiet:** Gibt die MBI ihr letztes Gebiet auf, bleibt ihr die
+  jetzige Erfahrung.
+- **Richten ohne engage:** Die MBI kann sich auch auf ein Gebiet richten, ohne
+  ein Thema zu verstärken. So kommt sie in die Sinne oder in die jetzige
+  Erfahrung.
+
+Zu den Themengebieten ohne MBI:
+
+- **Wie groß die Chance ist:** 25 Prozent pro Moment, für jedes Thema im Feld
+  der ABI, zu dem die MBI weder noch hält.
+- **Was „geht aus dem AUI in die ABI“ heißt:** Das Thema taucht im Feld der ABI
+  auf, weil es stark genug ist. Erst dann hat es die Chance.
+- **Was ein solches Gebiet bewirkt:** AUI und ABI orientieren sich daran wie an
+  einem Gebiet der MBI.
+- **Wann es sich auflöst:** wenn sein Thema aus dem Feld der ABI verblasst oder
+  die MBI disengaged. Engaged sie, gehört es ab dann der MBI.
+
+Zu den Gebieten:
+
+- **Wie sich das AUI an den Gebieten orientiert:** Erfahrungen aus den
+  jetzigen Gebieten zählen voll. Erfahrungen aus anderen Gebieten kommen mit
+  halber Stärke mit.
+- **Was zu einem Themengebiet gehört:** das Thema, aus dem es entstanden ist,
+  und alles, wozu die MBI dort engaged oder disengaged hat.
+- **Was zu den Sinnen gehört:** jeder sensorische Eindruck, egal in welchem
+  Gebiet sich die MBI gerade bewegt.
+- **Woran sich „taucht im Feld der ABI auf“ bemisst:** am Feld, wie es zu
+  Beginn des Moments ist, also am Ergebnis des vorigen Moments.
+- **Was die wahrgenommene Realität ist:** das Feld der ABI.
+- **Wann ein Gebietswechsel gilt:** ab dem nächsten Moment.
 
 Zu den Feldern:
 
