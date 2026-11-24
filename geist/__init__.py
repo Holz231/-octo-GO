@@ -1,6 +1,7 @@
 from .modell import (
     Ausrichtung,
     AutomatischeBewussteIntention,
+    Entscheidung,
     Erfahrung,
     Geist,
     Haltung,
@@ -15,6 +16,7 @@ from .modell import (
 __all__ = [
     "Ausrichtung",
     "AutomatischeBewussteIntention",
+    "Entscheidung",
     "Erfahrung",
     "Geist",
     "Haltung",
