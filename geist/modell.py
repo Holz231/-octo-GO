@@ -8,20 +8,22 @@ Die Layer:
 
 AUI und ABI sind zwei verschiedene, aneinander angrenzende Felder.
 
-Die MBI bewegt sich immer in einem bestimmten Themengebiet. An diesem Gebiet
-orientieren sich AUI und ABI. Das AUI führt aber vergangene Themen und
-Erfahrungen mit in jedes neue Gebiet, auf das sich die MBI richtet. Wie die MBI
-und das AUI gerade sind, formt gleichzeitig die wahrgenommene Realität der ABI.
+Die MBI bewegt sich immer in einem bestimmten Gebiet. Das kann ein Themengebiet
+sein (davon gibt es unendlich viele), die jetzige Erfahrung oder die Sinne. An
+diesem Gebiet orientieren sich AUI und ABI. Das AUI führt aber vergangene Themen
+und Erfahrungen mit in jedes neue Gebiet, auf das sich die MBI richtet. Wie die
+MBI und das AUI gerade sind, formt gleichzeitig die wahrgenommene Realität der
+ABI.
 
 Ablauf eines Moments:
 
 1. Das AUI erzeugt Impulse aus vorherigen und jetzigen Erfahrungen, orientiert
-   am Themengebiet der MBI. Sie liegen im Feld des AUI.
+   am Gebiet der MBI. Sie liegen im Feld des AUI.
 2. Ein Teil davon taucht im angrenzenden Feld der ABI auf: Das ist die
    wahrgenommene Realität. Die Impulse werden dabei nicht zur ABI, sie werden
    von ihr nur wahrgenommen.
 3. Die MBI nimmt Haltungen ein (engage, disengage oder weder noch) und kann
-   sich auf ein neues Themengebiet richten.
+   sich auf ein neues Gebiet richten.
 4. Jede Haltung wird selbst zur Erfahrung. Nur so, also indirekt, erreicht die
    MBI das AUI.
 """
@@ -35,6 +37,15 @@ from typing import Callable, Mapping
 # Schwächere Impulse gelten als nicht vorhanden.
 MINDESTSTAERKE = 0.01
 
+# Zwei besondere Gebiete, in denen sich die MBI bewegen kann. Jeder andere Name
+# steht für ein Themengebiet.
+SINNE = "Sinne"
+JETZIGE_ERFAHRUNG = "jetzige Erfahrung"
+
+# Herkunft von Vergangenem, das in die jetzige Erfahrung mitgeführt wird und
+# keinem anderen Gebiet angehört.
+FRUEHER = "früher"
+
 
 class Haltung(Enum):
     """Was die MBI mit dem tut, worauf sie gerichtet ist."""
@@ -44,27 +55,19 @@ class Haltung(Enum):
     WEDER_NOCH = "weder noch"  # "non disengage and non engage"
 
 
-class Quelle(Enum):
-    """Woher ein Thema stammt, zu dem die MBI eine Haltung einnimmt."""
-
-    THEMENGEBIET = "Themengebiet"  # frei gewählt, weder im Feld noch in den Sinnen
-    ERFAHRUNG = "jetzige Erfahrung"
-    SINNE = "Sinne"
-
-
 @dataclass(frozen=True)
 class Erfahrung:
     thema: str
     staerke: float  # negativ = wirkt dem Thema entgegen
     zeit: int
-    gebiet: str  # das Themengebiet, in dem sich die MBI dabei bewegt hat
+    gebiet: str  # das Gebiet, zu dem sie gehört
 
 
 @dataclass(frozen=True)
 class Impuls:
     thema: str
     staerke: float  # 0 bis 1
-    # Andere Themengebiete, aus denen das AUI diesen Impuls mitgebracht hat.
+    # Andere Gebiete, aus denen das AUI diesen Impuls mitgebracht hat.
     mitgebracht_aus: tuple[str, ...] = ()
 
 
@@ -72,7 +75,7 @@ class Impuls:
 class Lage:
     """Alles, was der MBI zugänglich ist. Das Feld des AUI gehört nicht dazu."""
 
-    gebiet: str  # das Themengebiet, in dem sie sich gerade bewegt
+    gebiet: str  # das Gebiet, in dem sie sich gerade bewegt
     abi_feld: tuple[Impuls, ...]  # die wahrgenommene Realität
     sinne: Mapping[str, float]  # sensorische Eindrücke: Thema -> Stärke
 
@@ -83,13 +86,6 @@ class Lage:
                 return impuls.staerke
         return self.sinne.get(thema, 0.0)
 
-    def quelle(self, thema: str) -> Quelle:
-        if thema in self.sinne:
-            return Quelle.SINNE
-        if any(impuls.thema == thema for impuls in self.abi_feld):
-            return Quelle.ERFAHRUNG
-        return Quelle.THEMENGEBIET
-
 
 @dataclass(frozen=True)
 class Entscheidung:
@@ -97,7 +93,7 @@ class Entscheidung:
 
     # Thema -> Haltung. Alles, was nicht genannt wird, bleibt bei "weder noch".
     haltungen: Mapping[str, Haltung] = field(default_factory=dict)
-    # Das Themengebiet, auf das sie sich neu richtet. None = im bisherigen bleiben.
+    # Das Gebiet, auf das sie sich neu richtet. None = im bisherigen bleiben.
     gebiet: str | None = None
 
 
@@ -106,7 +102,6 @@ class Ausrichtung:
     """Zu welchem Thema die MBI welche Haltung einnimmt."""
 
     thema: str
-    quelle: Quelle
     haltung: Haltung
 
 
@@ -119,6 +114,15 @@ STANDARD_WIRKUNG: Mapping[Haltung, float] = {
 }
 
 
+def gehoert_zum_gebiet(erfahrung: Erfahrung, gebiet: str, zeit: int) -> bool:
+    """Ob eine Erfahrung im Gebiet der MBI voll zählt, statt nur mitgeführt zu werden."""
+    if gebiet == JETZIGE_ERFAHRUNG:
+        # ANNAHME: Zur jetzigen Erfahrung gehört, was in diesem Moment erlebt
+        # wird. Alles Frühere ist vergangen und wird nur mitgeführt.
+        return erfahrung.zeit == zeit
+    return erfahrung.gebiet == gebiet
+
+
 class Unterbewusstsein:
     """AUI. Automatisch und unbewusst: läuft ständig und erzeugt Impulse.
 
@@ -128,8 +132,8 @@ class Unterbewusstsein:
     def __init__(self, nachklang: float = 0.8, mitnahme: float = 0.5):
         # ANNAHME: Eine Erfahrung wirkt pro Moment um diesen Faktor schwächer nach.
         self.nachklang = nachklang
-        # ANNAHME: Erfahrungen aus anderen Themengebieten kommen mit diesem
-        # Anteil ihrer Stärke mit. Die aus dem jetzigen Gebiet zählen voll.
+        # ANNAHME: Erfahrungen aus anderen Gebieten kommen mit diesem Anteil
+        # ihrer Stärke mit. Die aus dem Gebiet der MBI zählen voll.
         self.mitnahme = mitnahme
         self.erfahrungen: list[Erfahrung] = []
         self.feld: list[Impuls] = []
@@ -138,26 +142,29 @@ class Unterbewusstsein:
         self.erfahrungen.append(erfahrung)
 
     def erzeuge_impulse(self, zeit: int, gebiet: str) -> list[Impuls]:
-        """Füllt das Feld mit Impulsen, orientiert am Themengebiet der MBI."""
-        beitraege: dict[str, dict[str, float]] = {}  # Thema -> Gebiet -> Stärke
+        """Füllt das Feld mit Impulsen, orientiert am Gebiet der MBI."""
+        eigen: dict[str, float] = {}  # Thema -> Stärke aus dem Gebiet der MBI
+        mitgebracht: dict[str, dict[str, float]] = {}  # Thema -> Herkunft -> Stärke
         for e in self.erfahrungen:
-            je_gebiet = beitraege.setdefault(e.thema, {})
             nachwirkung = e.staerke * self.nachklang ** (zeit - e.zeit)
-            je_gebiet[e.gebiet] = je_gebiet.get(e.gebiet, 0.0) + nachwirkung
+            if gehoert_zum_gebiet(e, gebiet, zeit):
+                eigen[e.thema] = eigen.get(e.thema, 0.0) + nachwirkung
+            else:
+                herkunft = e.gebiet if e.gebiet != gebiet else FRUEHER
+                je_herkunft = mitgebracht.setdefault(e.thema, {})
+                je_herkunft[herkunft] = (
+                    je_herkunft.get(herkunft, 0.0) + nachwirkung * self.mitnahme
+                )
 
         impulse = []
-        for thema, je_gebiet in beitraege.items():
-            mitgebracht = {
-                g: staerke * self.mitnahme
-                for g, staerke in je_gebiet.items()
-                if g != gebiet
-            }
-            summe = je_gebiet.get(gebiet, 0.0) + sum(mitgebracht.values())
+        for thema in dict.fromkeys(e.thema for e in self.erfahrungen):
+            je_herkunft = mitgebracht.get(thema, {})
+            summe = eigen.get(thema, 0.0) + sum(je_herkunft.values())
             if summe < MINDESTSTAERKE:
                 continue
             herkunft = sorted(
-                (g for g, staerke in mitgebracht.items() if staerke >= MINDESTSTAERKE),
-                key=lambda g: mitgebracht[g],
+                (h for h, staerke in je_herkunft.items() if staerke >= MINDESTSTAERKE),
+                key=lambda h: je_herkunft[h],
                 reverse=True,
             )
             impulse.append(Impuls(thema, min(1.0, summe), tuple(herkunft)))
@@ -190,8 +197,9 @@ Entscheider = Callable[[Lage], Entscheidung]
 class ManuelleBewussteIntention:
     """MBI. Manuell und bewusst: was man willentlich lenkt.
 
-    Sie bewegt sich immer in genau einem Themengebiet und kann sich auf jedes
-    andere richten. Das Feld des AUI bekommt sie nie zu sehen.
+    Sie bewegt sich immer in genau einem Gebiet: in einem Themengebiet, in der
+    jetzigen Erfahrung oder in den Sinnen. Sie kann sich auf jedes andere
+    richten. Das Feld des AUI bekommt sie nie zu sehen.
     """
 
     def __init__(self, entscheider: Entscheider, gebiet: str):
@@ -203,7 +211,7 @@ class ManuelleBewussteIntention:
         if entscheidung.gebiet:
             self.gebiet = entscheidung.gebiet
         return [
-            Ausrichtung(thema, lage.quelle(thema), haltung)
+            Ausrichtung(thema, haltung)
             for thema, haltung in entscheidung.haltungen.items()
         ]
 
@@ -213,12 +221,12 @@ class Moment:
     """Was in einem Zeitschritt in den drei Layern passiert ist."""
 
     zeit: int
-    gebiet: str  # das Themengebiet, in dem sich die MBI bewegt hat
+    gebiet: str  # das Gebiet, in dem sich die MBI bewegt hat
     sinne: Mapping[str, float]  # sensorische Eindrücke dieses Moments
     aui_feld: tuple[Impuls, ...]  # alles, was im Feld des AUI liegt
     abi_feld: tuple[Impuls, ...]  # der Teil, der auch im Feld der ABI auftaucht
     ausrichtungen: tuple[Ausrichtung, ...]  # die Haltungen der MBI
-    wechsel_nach: str | None  # neues Themengebiet ab dem nächsten Moment
+    wechsel_nach: str | None  # neues Gebiet ab dem nächsten Moment
 
 
 class Geist:
@@ -244,14 +252,15 @@ class Geist:
         """Ein Moment. `sinne` sind die sensorischen Eindrücke: Thema -> Stärke."""
         sinne = dict(sinne or {})
         gebiet = self.manuell.gebiet
-        # ANNAHME: Sensorische Eindrücke sind jetzige Erfahrung und gehen ins AUI.
+        # ANNAHME: Sensorische Eindrücke gehen ins AUI und gehören zum Gebiet
+        # der Sinne, egal in welchem Gebiet sich die MBI gerade bewegt.
         for thema, staerke in sinne.items():
-            self.unterbewusstsein.erlebe(Erfahrung(thema, staerke, self.zeit, gebiet))
+            self.unterbewusstsein.erlebe(Erfahrung(thema, staerke, self.zeit, SINNE))
 
         aui_feld = self.unterbewusstsein.erzeuge_impulse(self.zeit, gebiet)
         abi_feld = self.automatisch.nimm_wahr(aui_feld)
         lage = Lage(gebiet, tuple(abi_feld), sinne)
-        # ANNAHME: Ein Wechsel des Themengebiets gilt ab dem nächsten Moment.
+        # ANNAHME: Ein Wechsel des Gebiets gilt ab dem nächsten Moment.
         ausrichtungen = self.manuell.richte_aus(lage)
 
         for ausrichtung in ausrichtungen:
