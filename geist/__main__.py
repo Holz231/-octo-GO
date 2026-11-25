@@ -1,7 +1,8 @@
 """Dem Geistmodell zusehen.
 
     python -m geist                  interaktiv: du bist die MBI
-    python -m geist --demo           die drei Haltungen im Vergleich
+    python -m geist --demo           engage, disengage und weder noch im Vergleich
+    python -m geist --demo haltung   wie eine frühere Haltung aus dem AUI auftaucht
     python -m geist --demo gebiete   wie das AUI Themen in neue Gebiete mitführt
     python -m geist --demo erinnerung  wie die MBI in die Erinnerung wechselt
 
@@ -15,25 +16,23 @@ import random
 
 from .modell import (
     ERINNERUNG,
-    HALTUNG,
     JETZIGE_ERFAHRUNG,
     SINNE,
     Entscheidung,
     Erfahrung,
     Geist,
-    Haltung,
+    Umgang,
     Lage,
     Moment,
 )
 
 BALKENBREITE = 20
-TASTEN = {"e": Haltung.ENGAGE, "d": Haltung.DISENGAGE, "w": Haltung.WEDER_NOCH}
+TASTEN = {"e": Umgang.ENGAGE, "d": Umgang.DISENGAGE, "w": Umgang.WEDER_NOCH}
 BESONDERE_GEBIETE = {
     "sinne": SINNE,
     "jetzt": JETZIGE_ERFAHRUNG,
     "jetzige erfahrung": JETZIGE_ERFAHRUNG,
     "erinnerung": ERINNERUNG,
-    "haltung": HALTUNG,
 }
 
 
@@ -45,7 +44,7 @@ def benenne(gebiete: tuple[str, ...]) -> str:
 
 
 def zeige(moment: Moment, schwelle: float) -> None:
-    kopf = f"\nMoment {moment.zeit} · MBI agiert in: {benenne(moment.gebiete)}"
+    kopf = f"\nMoment {moment.zeit} · Haltung der MBI: {benenne(moment.gebiete)}"
     if moment.gebiete_ohne_mbi:
         kopf += f" · ohne MBI: {benenne(moment.gebiete_ohne_mbi)}"
     print(kopf)
@@ -53,13 +52,18 @@ def zeige(moment: Moment, schwelle: float) -> None:
     impulse = {i.thema: i for i in moment.aui_feld}
     themen = list(impulse)
     if themen:
-        breite = max(len("Thema"), *(len(t) for t in themen))
+        # Eine frühere Haltung, die aus dem AUI auftaucht, als solche kennzeichnen.
+        namen = {
+            t: f"{t} (Haltung)" if impulse[t].haltung else t
+            for t in themen
+        }
+        breite = max(len("Thema"), *(len(n) for n in namen.values()))
         # Die beiden Felder grenzen aneinander: Der Balken reicht über die Grenze,
         # sobald ein Impuls stark genug ist, um auch im Feld der ABI aufzutauchen.
         grenze = round(schwelle * BALKENBREITE)
         felder = f"{'AUI':<{grenze}}│{'ABI':<{BALKENBREITE - grenze}}"
         print(
-            f"  {'Thema':<{breite}}  {felder}  {'':4}  {'Haltung':<10}"
+            f"  {'Thema':<{breite}}  {felder}  {'':4}  {'MBI':<10}"
             f"  {'Themengebiet':<12}  mitgebracht aus"
         )
         for thema in themen:
@@ -69,7 +73,7 @@ def zeige(moment: Moment, schwelle: float) -> None:
             # Rundung darf den Balken nicht auf die falsche Seite der Grenze setzen.
             voll = max(voll, grenze + 1) if staerke >= schwelle else min(voll, grenze)
             balken = "█" * voll + "░" * (BALKENBREITE - voll)
-            haltung = moment.haltungen.get(thema)
+            umgang = moment.umgang.get(thema)
             if thema in moment.gebiete:
                 gebiet = "der MBI"
             elif thema in moment.gebiete_ohne_mbi:
@@ -78,14 +82,14 @@ def zeige(moment: Moment, schwelle: float) -> None:
                 gebiet = "-"
             herkunft = ", ".join(impuls.mitgebracht_aus) if impuls else ""
             print(
-                f"  {thema:<{breite}}  {balken[:grenze]}│{balken[grenze:]}  {staerke:.2f}"
-                f"  {haltung.value if haltung else '-':<10}  {gebiet:<12}  {herkunft or '-'}"
+                f"  {namen[thema]:<{breite}}  {balken[:grenze]}│{balken[grenze:]}  {staerke:.2f}"
+                f"  {umgang.value if umgang else '-':<10}  {gebiet:<12}  {herkunft or '-'}"
             )
     else:
         print("  (nichts)")
 
     if moment.gebiete_danach != moment.gebiete:
-        print(f"  → Die MBI agiert ab jetzt in: {benenne(moment.gebiete_danach)}")
+        print(f"  → Neue Haltung der MBI: {benenne(moment.gebiete_danach)}")
     for gebiet in moment.gebiete_ohne_mbi_danach:
         if gebiet not in moment.gebiete_ohne_mbi:
             print(f"  → Ohne die MBI wird zum Themengebiet: {gebiet}")
@@ -94,12 +98,12 @@ def zeige(moment: Moment, schwelle: float) -> None:
             print(f"  → Themengebiet ohne MBI löst sich auf: {gebiet}")
 
 
-def demo_haltungen(mehrere: bool) -> None:
-    """Die drei Haltungen nebeneinander.
+def demo_umgang(mehrere: bool) -> None:
+    """Engage, disengage und weder noch nebeneinander.
 
     Sorge, Hunger und Ohrwurm stammen alle aus dem Themengebiet Zuhause und
     sind gleich stark. Die MBI agiert in der Arbeit, also kommen alle drei nur
-    abgeschwächt mit. Dann nimmt sie zu jedem eine andere Haltung ein:
+    abgeschwächt mit. Dann geht sie mit jedem anders um:
 
     - Sorge: engage. Sie wird im AUI stärker und zum Themengebiet der MBI.
     - Hunger: disengage. Er wird im AUI schwächer und verschwindet.
@@ -109,12 +113,12 @@ def demo_haltungen(mehrere: bool) -> None:
 
     def entscheider(lage: Lage) -> Entscheidung:
         im_feld = {impuls.thema for impuls in lage.abi_feld}
-        haltungen = {}
+        umgang = {}
         if geist.zeit < 3:
-            haltungen["Sorge"] = Haltung.ENGAGE
+            umgang["Sorge"] = Umgang.ENGAGE
         if "Hunger" in im_feld:
-            haltungen["Hunger"] = Haltung.DISENGAGE
-        return Entscheidung(haltungen)
+            umgang["Hunger"] = Umgang.DISENGAGE
+        return Entscheidung(umgang)
 
     # Fester Zufall, damit der Ablauf jedes Mal gleich ist.
     geist = Geist(entscheider, "Arbeit", mehrere=mehrere, zufall=random.Random(7))
@@ -162,8 +166,8 @@ def demo_erinnerung(mehrere: bool) -> None:
     """
     ablauf = {
         0: Entscheidung(themenwechsel=ERINNERUNG),
-        1: Entscheidung({"Streit": Haltung.ENGAGE}),
-        2: Entscheidung({"Streit": Haltung.ENGAGE}),
+        1: Entscheidung({"Streit": Umgang.ENGAGE}),
+        2: Entscheidung({"Streit": Umgang.ENGAGE}),
     }
     geist = Geist(
         lambda lage: ablauf.get(geist.zeit, Entscheidung()),
@@ -176,8 +180,31 @@ def demo_erinnerung(mehrere: bool) -> None:
         zeige(geist.schritt(), geist.automatisch.schwelle)
 
 
+def demo_haltung(mehrere: bool) -> None:
+    """Eine frühere Haltung taucht aus dem AUI auf, und die MBI engaged darauf.
+
+    Die Sorge wurde in der Haltung Familie erlebt, das AUI enthält diese
+    Haltung also. Die MBI ist in der Arbeit. Mit der Sorge taucht auch die
+    Familie als frühere Haltung im Feld der ABI auf. Die MBI engaged darauf,
+    die Familie wird ihre Haltung, und die Sorge zählt wieder voll. Jetzt ist
+    es die Arbeit, die als frühere Haltung im AUI liegt. Themengebiete ohne
+    die MBI sind hier abgeschaltet.
+    """
+    ablauf = {1: Entscheidung({"Familie": Umgang.ENGAGE})}
+    geist = Geist(
+        lambda lage: ablauf.get(geist.zeit, Entscheidung()),
+        "Arbeit",
+        mehrere=mehrere,
+        chance=0.0,
+    )
+    geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 1.0, 0, ("Familie",)))
+    for _ in range(4):
+        zeige(geist.schritt(), geist.automatisch.schwelle)
+
+
 DEMOS = {
-    "haltungen": demo_haltungen,
+    "haltung": demo_haltung,
+    "umgang": demo_umgang,
     "gebiete": demo_gebiete,
     "erinnerung": demo_erinnerung,
 }
@@ -189,8 +216,8 @@ def lies_gebiet(text: str) -> str:
 
 
 def lies_entscheidung(text: str) -> Entscheidung:
-    """'e Sorge, d Musik, g sinne' -> Haltungen zu Sorge und Musik, Wechsel in die Sinne"""
-    haltungen: dict[str, Haltung] = {}
+    """'e Sorge, d Musik, g sinne' -> Umgang mit Sorge und Musik, Wechsel in die Sinne"""
+    umgang: dict[str, Umgang] = {}
     gebiet = None
     for teil in text.split(","):
         if not teil.strip():
@@ -202,14 +229,14 @@ def lies_entscheidung(text: str) -> Entscheidung:
         if taste == "g":
             gebiet = lies_gebiet(name)
         else:
-            haltungen[name] = TASTEN[taste]
-    return Entscheidung(haltungen, gebiet)
+            umgang[name] = TASTEN[taste]
+    return Entscheidung(umgang, gebiet)
 
 
 def frage_entscheidung(lage: Lage) -> Entscheidung:
     feld = ", ".join(f"{i.thema} ({i.staerke:.2f})" for i in lage.abi_feld)
     sinne = ", ".join(f"{t} ({s:.2f})" for t, s in lage.sinne.items())
-    print(f"  Du agierst in: {benenne(lage.gebiete)}")
+    print(f"  Deine Haltung: {benenne(lage.gebiete)}")
     if lage.gebiete_ohne_mbi:
         print(f"  Ohne dich:     {benenne(lage.gebiete_ohne_mbi)}")
     print(f"  ABI-Feld:      {feld or '-'}")
@@ -222,7 +249,7 @@ def frage_entscheidung(lage: Lage) -> Entscheidung:
         except ValueError as fehler:
             print(f"  Nicht verstanden: '{fehler}'. Beispiel: e Sorge, d Musik, g sinne")
             continue
-        fremd = [thema for thema in entscheidung.haltungen if thema not in im_feld]
+        fremd = [thema for thema in entscheidung.umgang if thema not in im_feld]
         if not fremd:
             return entscheidung
         print(f"  Nicht im ABI-Feld: {', '.join(fremd)}. Engage und disengage gibt es")
@@ -242,26 +269,28 @@ def lies_sinne(text: str) -> dict[str, float]:
 def interaktiv(mehrere: bool) -> None:
     print("Du bist die manuelle bewusste Intention (MBI).")
     if mehrere:
-        print("Du hältst mehrere Gebiete zugleich.")
+        print("Deine Haltung ist das Gebiet, in dem du agierst. Du hältst mehrere zugleich.")
     else:
-        print("Du hältst immer nur ein Gebiet. (Mehrere zugleich: mit --mehrere starten.)")
+        print("Deine Haltung ist das Gebiet, in dem du agierst. Du hältst immer nur eines.")
+        print("(Mehrere zugleich: mit --mehrere starten.)")
     print()
     print("Jeder Moment hat zwei Eingaben:")
     print("1. Sinne: 'Thema' oder 'Thema=Stärke' (0 bis 1), mehrere mit Komma.")
     print("   Leer = keine Eindrücke, 'q' beendet.")
     print("2. Was du tust, mehrere mit Komma:")
-    print("   'e Thema'  engage: verstärkt das Thema und macht es zu deinem Themengebiet.")
-    print("   'd Thema'  disengage: schwächt das Thema, es ist kein Gebiet von dir mehr.")
+    print("   'e Thema'  engage: verstärkt das Thema und macht es zu deiner Haltung.")
+    print("              Das geht auch mit einer früheren Haltung, die auftaucht.")
+    print("   'd Thema'  disengage: schwächt das Thema, es gehört nicht mehr zu deiner Haltung.")
     print("              Beides geht nur zu Themen, die im ABI-Feld auftauchen.")
     print("   'g Gebiet' Themenwechsel, ohne etwas zu verstärken: in ein beliebiges")
-    print("              Themengebiet, 'sinne', 'jetzt' (die jetzige Erfahrung),")
-    print("              'erinnerung' oder 'haltung'.")
+    print("              Themengebiet, 'sinne', 'jetzt' (die jetzige Erfahrung) oder")
+    print("              'erinnerung'.")
     print("   Leer = Themenerhalt und weder noch: Dann kann ein Thema im ABI-Feld")
     print("   von selbst zum Themengebiet werden.")
     try:
         gebiet = ""
         while not gebiet:
-            gebiet = lies_gebiet(input("\nIn welchem Gebiet agierst du? "))
+            gebiet = lies_gebiet(input("\nIn welcher Haltung bist du? "))
         geist = Geist(frage_entscheidung, gebiet, mehrere=mehrere)
         while True:
             eingabe = input("\nWas nehmen deine Sinne wahr? ")
@@ -282,9 +311,9 @@ def main() -> None:
     parser.add_argument(
         "--demo",
         nargs="?",
-        const="haltungen",
+        const="umgang",
         choices=sorted(DEMOS),
-        help="festen Ablauf zeigen (Standard: haltungen)",
+        help="festen Ablauf zeigen (Standard: umgang)",
     )
     parser.add_argument(
         "--mehrere",

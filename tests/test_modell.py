@@ -1,12 +1,11 @@
 from geist import (
     ERINNERUNG,
-    HALTUNG,
     JETZIGE_ERFAHRUNG,
     SINNE,
     Entscheidung,
     Erfahrung,
     Geist,
-    Haltung,
+    Umgang,
     Unterbewusstsein,
 )
 
@@ -17,8 +16,8 @@ def nichts(lage):
     return Entscheidung()
 
 
-def immer(haltung, thema="Thema"):
-    return lambda lage: Entscheidung({thema: haltung})
+def immer(umgang, thema="Thema"):
+    return lambda lage: Entscheidung({thema: umgang})
 
 
 def nach_plan(plan):
@@ -47,15 +46,24 @@ def impuls(moment, thema):
     return next(i for i in moment.aui_feld if i.thema == thema)
 
 
+def themen(feld):
+    """Die Impulse eines Feldes ohne die früheren Haltungen, die darin auftauchen."""
+    return [i for i in feld if not i.haltung]
+
+
 def im_feld(moment):
-    return [i.thema for i in moment.abi_feld]
+    return [i.thema for i in themen(moment.abi_feld)]
+
+
+def haltungen_im_feld(moment):
+    return [i.thema for i in moment.abi_feld if i.haltung]
 
 
 STARK_UND_SCHWACH = (erfahrung("Stark", 0.9), erfahrung("Schwach", 0.1))
 SORGE_AUS_DER_FAMILIE = (erfahrung("Sorge", 0.8, "Familie"),)
 ERST_ENGAGE_DANN_DISENGAGE = {
-    0: Entscheidung({"Sorge": Haltung.ENGAGE}),
-    1: Entscheidung({"Sorge": Haltung.DISENGAGE}),
+    0: Entscheidung({"Sorge": Umgang.ENGAGE}),
+    1: Entscheidung({"Sorge": Umgang.DISENGAGE}),
 }
 
 
@@ -120,7 +128,7 @@ def test_mbi_sieht_abi_feld_und_sinne_aber_nicht_das_aui_feld():
 
 def test_engage_verstaerkt_das_thema_im_aui():
     ohne = geist_mit(erfahrungen=[erfahrung("Thema", 0.5)], nachklang=1.0)
-    mit = geist_mit(immer(Haltung.ENGAGE), erfahrungen=[erfahrung("Thema", 0.5)], nachklang=1.0)
+    mit = geist_mit(immer(Umgang.ENGAGE), erfahrungen=[erfahrung("Thema", 0.5)], nachklang=1.0)
     for geist in (ohne, mit):
         geist.schritt()
 
@@ -130,7 +138,7 @@ def test_engage_verstaerkt_das_thema_im_aui():
 
 def test_engage_macht_das_thema_zum_alleinigen_gebiet_wenn_die_mbi_nur_eines_haelt():
     geist = geist_mit(
-        nach_plan({0: Entscheidung({"Sorge": Haltung.ENGAGE})}),
+        nach_plan({0: Entscheidung({"Sorge": Umgang.ENGAGE})}),
         "Arbeit",
         SORGE_AUS_DER_FAMILIE,
     )
@@ -142,7 +150,7 @@ def test_engage_macht_das_thema_zum_alleinigen_gebiet_wenn_die_mbi_nur_eines_hae
 
 def test_engage_stellt_das_thema_parallel_wenn_die_mbi_mehrere_haelt():
     geist = geist_mit(
-        immer(Haltung.ENGAGE, "Sorge"), "Arbeit", SORGE_AUS_DER_FAMILIE, mehrere=True
+        immer(Umgang.ENGAGE, "Sorge"), "Arbeit", SORGE_AUS_DER_FAMILIE, mehrere=True
     )
     geist.schritt()
     assert geist.schritt().gebiete == ("Arbeit", "Sorge")
@@ -150,7 +158,7 @@ def test_engage_stellt_das_thema_parallel_wenn_die_mbi_mehrere_haelt():
 
 def test_im_eigenen_themengebiet_zaehlt_das_thema_voll():
     geist = geist_mit(
-        nach_plan({0: Entscheidung({"Sorge": Haltung.ENGAGE})}),
+        nach_plan({0: Entscheidung({"Sorge": Umgang.ENGAGE})}),
         "Arbeit",
         SORGE_AUS_DER_FAMILIE,
         nachklang=1.0,
@@ -163,21 +171,21 @@ def test_im_eigenen_themengebiet_zaehlt_das_thema_voll():
 
 def test_engage_gibt_es_nur_zu_dem_was_im_abi_feld_auftaucht():
     geist = geist_mit(
-        immer(Haltung.ENGAGE, "Leise"), "Arbeit", [erfahrung("Leise", 0.2, "Arbeit")]
+        immer(Umgang.ENGAGE, "Leise"), "Arbeit", [erfahrung("Leise", 0.2, "Arbeit")]
     )
     moment = geist.schritt()
 
     assert im_feld(moment) == []
-    assert moment.haltungen == {}
+    assert moment.umgang == {}
     assert moment.gebiete_danach == ("Arbeit",)
     assert len(geist.unterbewusstsein.erfahrungen) == 1
 
 
 def test_engage_gehoert_zu_den_gebieten_in_denen_die_mbi_agiert_hat():
-    geist = geist_mit(immer(Haltung.ENGAGE, "Mail"), "Arbeit", [erfahrung("Mail", 0.5, "Arbeit")])
+    geist = geist_mit(immer(Umgang.ENGAGE, "Mail"), "Arbeit", [erfahrung("Mail", 0.5, "Arbeit")])
     geist.schritt()
     neu = geist.unterbewusstsein.erfahrungen[-1]
-    assert (neu.thema, neu.staerke, neu.gebiete) == ("Mail", 0.4, ("Arbeit", HALTUNG))
+    assert (neu.thema, neu.staerke, neu.gebiete) == ("Mail", 0.4, ("Arbeit",))
 
 
 # --- Disengage: schwächt im AUI und verhindert das Themengebiet ---
@@ -185,14 +193,14 @@ def test_engage_gehoert_zu_den_gebieten_in_denen_die_mbi_agiert_hat():
 
 def test_disengage_schwaecht_das_thema_im_aui():
     geist = geist_mit(
-        immer(Haltung.DISENGAGE), erfahrungen=[erfahrung("Thema", 0.8)], nachklang=1.0
+        immer(Umgang.DISENGAGE), erfahrungen=[erfahrung("Thema", 0.8)], nachklang=1.0
     )
     verlauf = [staerke(geist.schritt(), "Thema") for _ in range(3)]
     assert [round(s, 2) for s in verlauf] == [0.8, 0.4, 0.0]
 
 
 def test_disengage_macht_das_thema_nicht_zum_gebiet():
-    geist = geist_mit(immer(Haltung.DISENGAGE, "Sorge"), "Arbeit", SORGE_AUS_DER_FAMILIE)
+    geist = geist_mit(immer(Umgang.DISENGAGE, "Sorge"), "Arbeit", SORGE_AUS_DER_FAMILIE)
     assert geist.schritt().gebiete_danach == ("Arbeit",)
 
 
@@ -209,8 +217,8 @@ def test_ohne_eigenes_gebiet_bleibt_der_mbi_die_jetzige_erfahrung():
 
 
 def test_disengage_gibt_es_nur_zu_dem_was_im_abi_feld_auftaucht():
-    geist = geist_mit(immer(Haltung.DISENGAGE, "Nirgends"))
-    assert geist.schritt().haltungen == {}
+    geist = geist_mit(immer(Umgang.DISENGAGE, "Nirgends"))
+    assert geist.schritt().umgang == {}
     assert geist.unterbewusstsein.erfahrungen == []
 
 
@@ -218,7 +226,7 @@ def test_disengage_gibt_es_nur_zu_dem_was_im_abi_feld_auftaucht():
 
 
 def test_weder_noch_verstaerkt_nicht_und_schwaecht_nicht():
-    for entscheider in (nichts, immer(Haltung.WEDER_NOCH)):
+    for entscheider in (nichts, immer(Umgang.WEDER_NOCH)):
         geist = geist_mit(entscheider, erfahrungen=[erfahrung("Thema", 0.9)])
         geist.schritt()
         assert len(geist.unterbewusstsein.erfahrungen) == 1
@@ -243,8 +251,8 @@ def test_nur_was_im_abi_feld_auftaucht_kann_von_selbst_zum_gebiet_werden():
 
 
 def test_engage_und_disengage_lassen_keine_chance():
-    for haltung in (Haltung.ENGAGE, Haltung.DISENGAGE):
-        geist = geist_mit(immer(haltung, "Sorge"), "Arbeit", SORGE_AUS_DER_FAMILIE, chance=1.0)
+    for umgang in (Umgang.ENGAGE, Umgang.DISENGAGE):
+        geist = geist_mit(immer(umgang, "Sorge"), "Arbeit", SORGE_AUS_DER_FAMILIE, chance=1.0)
         assert geist.schritt().gebiete_ohne_mbi_danach == ()
 
 
@@ -268,7 +276,7 @@ def test_themengebiet_ohne_mbi_loest_sich_auf_wenn_das_thema_verblasst():
 
 def test_engage_uebernimmt_ein_themengebiet_das_ohne_mbi_entstanden_ist():
     geist = geist_mit(
-        nach_plan({1: Entscheidung({"Sorge": Haltung.ENGAGE})}),
+        nach_plan({1: Entscheidung({"Sorge": Umgang.ENGAGE})}),
         "Arbeit",
         SORGE_AUS_DER_FAMILIE,
         chance=1.0,
@@ -282,7 +290,7 @@ def test_engage_uebernimmt_ein_themengebiet_das_ohne_mbi_entstanden_ist():
 
 def test_disengage_beendet_ein_themengebiet_das_ohne_mbi_entstanden_ist():
     geist = geist_mit(
-        nach_plan({1: Entscheidung({"Sorge": Haltung.DISENGAGE})}),
+        nach_plan({1: Entscheidung({"Sorge": Umgang.DISENGAGE})}),
         "Arbeit",
         SORGE_AUS_DER_FAMILIE,
         chance=1.0,
@@ -329,9 +337,9 @@ def test_aui_orientiert_sich_am_gebiet_der_mbi():
     unterbewusstsein = Unterbewusstsein(mitnahme=0.5)
     unterbewusstsein.erlebe(erfahrung("Sorge", 0.8, gebiet="Familie"))
 
-    (daheim,) = unterbewusstsein.erzeuge_impulse(0, ["Familie"])
-    (woanders,) = unterbewusstsein.erzeuge_impulse(0, ["Arbeit"])
-    (beides,) = unterbewusstsein.erzeuge_impulse(0, ["Arbeit", "Familie"])
+    (daheim,) = themen(unterbewusstsein.erzeuge_impulse(0, ["Familie"]))
+    (woanders,) = themen(unterbewusstsein.erzeuge_impulse(0, ["Arbeit"]))
+    (beides,) = themen(unterbewusstsein.erzeuge_impulse(0, ["Arbeit", "Familie"]))
 
     assert (daheim.staerke, daheim.mitgebracht_aus) == (0.8, ())
     assert (woanders.staerke, woanders.mitgebracht_aus) == (0.4, ("Familie",))
@@ -347,7 +355,7 @@ def test_aui_fuehrt_vergangene_themen_mit_in_neue_gebiete():
     geist.schritt()
     moment = geist.schritt()
 
-    (sorge,) = moment.abi_feld
+    (sorge,) = themen(moment.abi_feld)
     assert moment.gebiete == ("Arbeit",)
     assert (sorge.thema, sorge.mitgebracht_aus) == ("Sorge", ("Familie",))
 
@@ -394,7 +402,7 @@ def test_in_den_sinnen_zaehlen_sinneseindruecke_voll_sonst_kommen_sie_nur_mit():
 
 def test_themen_kommen_abgeschwaecht_mit_in_die_sinne():
     geist = geist_mit(gebiet=SINNE, erfahrungen=SORGE_AUS_DER_FAMILIE)
-    (sorge,) = geist.schritt().aui_feld
+    (sorge,) = themen(geist.schritt().aui_feld)
     assert (sorge.staerke, sorge.mitgebracht_aus) == (0.4, ("Familie",))
 
 
@@ -420,7 +428,7 @@ def test_was_nicht_im_abi_feld_auftaucht_wird_nur_mitgefuehrt():
     )
     for _ in range(2):
         moment = geist.schritt()
-        (leise,) = moment.aui_feld
+        (leise,) = themen(moment.aui_feld)
         assert moment.abi_feld == ()
         assert (leise.staerke, leise.mitgebracht_aus) == (0.2, ("Familie",))
 
@@ -443,21 +451,21 @@ VERBLASSTER_STREIT = (erfahrung("Streit", 0.9, "Familie", zeit=-10),)
 IN_DIE_ERINNERUNG = Entscheidung(themenwechsel=ERINNERUNG)
 
 
-def test_zu_dem_was_nur_im_aui_liegt_gibt_es_keine_haltung():
-    geist = geist_mit(immer(Haltung.ENGAGE, "Streit"), "Familie", VERBLASSTER_STREIT)
+def test_mit_dem_was_nur_im_aui_liegt_gibt_es_keinen_umgang():
+    geist = geist_mit(immer(Umgang.ENGAGE, "Streit"), "Familie", VERBLASSTER_STREIT)
     moment = geist.schritt()
 
     assert [i.thema for i in moment.aui_feld] == ["Streit"]
     assert moment.abi_feld == ()
-    assert moment.haltungen == {}
+    assert moment.umgang == {}
 
 
 def test_in_der_erinnerung_zaehlt_frueheres_unverblasst_egal_aus_welchem_gebiet():
     unterbewusstsein = Unterbewusstsein()
     unterbewusstsein.erlebe(VERBLASSTER_STREIT[0])
 
-    (verblasst,) = unterbewusstsein.erzeuge_impulse(0, ["Familie"])
-    (erinnert,) = unterbewusstsein.erzeuge_impulse(0, [ERINNERUNG])
+    (verblasst,) = themen(unterbewusstsein.erzeuge_impulse(0, ["Familie"]))
+    (erinnert,) = themen(unterbewusstsein.erzeuge_impulse(0, [ERINNERUNG]))
 
     assert verblasst.staerke < 0.1
     assert (erinnert.staerke, erinnert.mitgebracht_aus) == (0.9, ())
@@ -489,37 +497,76 @@ def test_was_gerade_erst_erlebt_wird_ist_noch_keine_erinnerung():
 
 
 def test_in_der_erinnerung_ist_engage_moeglich():
-    plan = {0: IN_DIE_ERINNERUNG, 1: Entscheidung({"Streit": Haltung.ENGAGE})}
+    plan = {0: IN_DIE_ERINNERUNG, 1: Entscheidung({"Streit": Umgang.ENGAGE})}
     geist = geist_mit(nach_plan(plan), "Arbeit", VERBLASSTER_STREIT)
     geist.schritt()
     moment = geist.schritt()
 
-    assert moment.haltungen == {"Streit": Haltung.ENGAGE}
+    assert moment.umgang == {"Streit": Umgang.ENGAGE}
     assert moment.gebiete_danach == ("Streit",)
 
 
-# --- Die Haltung als Gebiet ---
+# --- Die Haltung: das Gebiet der MBI. Das AUI kann frühere Haltungen enthalten ---
 
 
-def test_mbi_kann_ihr_thema_in_die_haltung_wechseln():
-    geist = geist_mit(nach_plan({0: Entscheidung(themenwechsel=HALTUNG)}), "Arbeit")
-    assert geist.schritt().gebiete_danach == (HALTUNG,)
+def test_die_mbi_befindet_sich_immer_in_einer_haltung():
+    geist = geist_mit(nach_plan(ERST_ENGAGE_DANN_DISENGAGE), "Arbeit", SORGE_AUS_DER_FAMILIE)
+    assert all(geist.schritt().gebiete_danach for _ in range(3))
 
 
-def test_engage_und_disengage_gehoeren_auch_zum_gebiet_der_haltung():
-    for haltung, wirkung in ((Haltung.ENGAGE, 0.4), (Haltung.DISENGAGE, -0.4)):
-        geist = geist_mit(immer(haltung, "Sorge"), "Arbeit", SORGE_AUS_DER_FAMILIE)
+def test_eine_erfahrung_enthaelt_die_haltung_in_der_die_mbi_dabei_war():
+    for umgang, wirkung in ((Umgang.ENGAGE, 0.4), (Umgang.DISENGAGE, -0.4)):
+        geist = geist_mit(immer(umgang, "Sorge"), "Arbeit", SORGE_AUS_DER_FAMILIE)
         geist.schritt()
         neu = geist.unterbewusstsein.erfahrungen[-1]
-        assert (neu.staerke, neu.gebiete) == (wirkung, ("Arbeit", HALTUNG))
+        assert (neu.staerke, neu.gebiete) == (wirkung, ("Arbeit",))
 
 
-def test_in_der_haltung_zaehlt_voll_wozu_die_mbi_eine_haltung_eingenommen_hat():
+def test_fruehere_haltung_aus_dem_aui_taucht_im_bewusstsein_auf():
+    moment = geist_mit(gebiet="Arbeit", erfahrungen=SORGE_AUS_DER_FAMILIE).schritt()
+    assert haltungen_im_feld(moment) == ["Familie"]
+
+
+def test_die_haltung_in_der_die_mbi_gerade_ist_taucht_nicht_als_fruehere_auf():
+    moment = geist_mit(gebiet="Familie", erfahrungen=SORGE_AUS_DER_FAMILIE).schritt()
+    assert [i.thema for i in moment.aui_feld] == ["Sorge"]
+
+
+def test_haltung_taucht_so_stark_auf_wie_ihr_staerkstes_thema():
     unterbewusstsein = Unterbewusstsein()
-    unterbewusstsein.erlebe(Erfahrung("Engaged", 0.4, 0, ("Arbeit", HALTUNG)))
-    unterbewusstsein.erlebe(Erfahrung("Nur erlebt", 0.4, 0, ("Arbeit",)))
+    unterbewusstsein.erlebe(erfahrung("Sorge", 0.8, "Familie"))
+    unterbewusstsein.erlebe(erfahrung("Streit", 0.4, "Familie"))
 
-    engaged, nur_erlebt = unterbewusstsein.erzeuge_impulse(0, [HALTUNG])
+    (familie,) = (i for i in unterbewusstsein.erzeuge_impulse(0, ["Arbeit"]) if i.haltung)
 
-    assert (engaged.thema, engaged.staerke, engaged.mitgebracht_aus) == ("Engaged", 0.4, ())
-    assert (nur_erlebt.staerke, nur_erlebt.mitgebracht_aus) == (0.2, ("Arbeit",))
+    assert (familie.thema, familie.staerke) == ("Familie", 0.4)
+
+
+def test_mbi_kann_auf_eine_aufgetauchte_haltung_engagen():
+    geist = geist_mit(
+        nach_plan({0: Entscheidung({"Familie": Umgang.ENGAGE})}),
+        "Arbeit",
+        SORGE_AUS_DER_FAMILIE,
+        nachklang=1.0,
+    )
+    erster, zweiter = geist.schritt(), geist.schritt()
+    sorge = impuls(zweiter, "Sorge")
+
+    assert erster.gebiete_danach == ("Familie",)
+    # In der wieder eingenommenen Haltung zählt die Sorge voll.
+    assert (sorge.staerke, sorge.mitgebracht_aus) == (0.8, ())
+    # Die verlassene Haltung liegt jetzt ihrerseits im AUI.
+    assert haltungen_im_feld(zweiter) == ["Arbeit"]
+
+
+def test_eine_haltung_wird_nicht_ohne_die_mbi_zum_gebiet():
+    geist = geist_mit(gebiet="Arbeit", erfahrungen=SORGE_AUS_DER_FAMILIE, chance=1.0)
+    moment = geist.schritt()
+
+    assert haltungen_im_feld(moment) == ["Familie"]
+    assert moment.gebiete_ohne_mbi_danach == ("Sorge",)
+
+
+def test_sinne_tauchen_nicht_als_fruehere_haltung_auf():
+    moment = geist_mit(gebiet="Arbeit").schritt({"Laerm": 0.9})
+    assert [i.thema for i in moment.aui_feld] == ["Laerm"]

@@ -8,7 +8,8 @@ welche Lücken das Programm vorläufig mit eigenen Annahmen füllt.
 
 ## Ausprobieren
 
-    python -m geist --demo             # die drei Haltungen im Vergleich
+    python -m geist --demo             # engage, disengage und weder noch im Vergleich
+    python -m geist --demo haltung     # wie eine frühere Haltung aus dem AUI auftaucht
     python -m geist --demo gebiete     # wie das AUI Themen in neue Gebiete mitführt
     python -m geist --demo erinnerung  # wie die MBI in die Erinnerung wechselt
     python -m geist                    # interaktiv: du bist die MBI
@@ -38,21 +39,20 @@ Festgelegt:
 2. AUI und ABI sind zwei verschiedene Felder, die aneinander angrenzen. Ein
    Teil dessen, was das AUI erzeugt, taucht im Feld der ABI auf und wird von ihr
    wahrgenommen. Es wird dabei nicht selbst zur ABI.
-3. Die MBI bewegt sich immer in einem bestimmten Gebiet. Es gibt fünf Arten
-   von Gebieten:
+3. Die MBI bewegt sich immer in einem bestimmten Gebiet. Dieses Gebiet ist
+   ihre Haltung: Eine Haltung wird durch die MBI erschaffen, und man befindet
+   sich immer in einer. Es gibt vier Arten von Gebieten:
    - ein Themengebiet (davon gibt es unendlich viele, etwa Familie oder Arbeit),
    - die jetzige Erfahrung: alles, was im Feld der ABI auftaucht,
    - die sensorischen Eindrücke,
-   - die Erinnerung,
-   - die Haltung.
+   - die Erinnerung.
 4. An dem Gebiet, in dem sich die MBI bewegt, orientieren sich ABI und AUI.
 5. Das AUI führt vergangene Themen und Erfahrungen mit sich in neue Gebiete,
    auf die sich die MBI richtet.
 6. Wie die MBI und das AUI gerade sind, formt gleichzeitig die wahrgenommene
    Realität der ABI.
-7. Die MBI nimmt zu einem Thema eine von drei Haltungen ein. Haltungen gibt
-   es nur bei AUI und ABI, also zu dem, was aus dem AUI im Feld der ABI
-   auftaucht:
+7. Die MBI geht mit einem Thema auf eine von drei Arten um. Das gibt es nur
+   bei AUI und ABI, also mit dem, was aus dem AUI im Feld der ABI auftaucht:
    - **engage** verstärkt das Thema im AUI. Zugleich macht die MBI es zu einem
      neuen Themengebiet, in dem sie agiert: parallel zum bisherigen oder
      allein, je nachdem, ob die MBI mehrere Themen zugleich hat oder nur eines.
@@ -68,10 +68,11 @@ Festgelegt:
    Themenwechsel oder ein Themenerhalt.
 9. Die MBI hat keinen direkten Zugriff auf das AUI. Sie erreicht es nur
    indirekt. Zu etwas, das nur im AUI liegt und nicht in der ABI auftaucht,
-   kann sie keine Haltung einnehmen.
+   kann sie weder engagen noch disengagen.
 10. Die MBI kann Erinnerungen aktivieren. Die Erinnerung ist dabei nur ein
-    anderes Themengebiet, genauso wie die Haltung: Auch sie ist selbst ein
-    Gebiet.
+    anderes Themengebiet.
+11. Das AUI kann die Haltung beeinflussen: Enthält es eine Haltung, kann diese
+    ins Bewusstsein auftauchen, und die MBI kann dann darauf engagen.
 
 Bewusst zurückgestellt: Grenzen der MBI (Aufmerksamkeit, Energie),
 Gewohnheitsbildung, weitere Bausteine wie Emotion oder Körper.
@@ -81,7 +82,8 @@ Gewohnheitsbildung, weitere Bausteine wie Emotion oder Körper.
 Diese Punkte gibt das Modell noch nicht vor. Das Programm braucht sie aber, um
 zu laufen. Sie stehen in `geist/modell.py` und sind dort mit `ANNAHME` markiert.
 
-Zu den Haltungen:
+Zum Umgang mit einem Thema (engage, disengage, weder noch). Das Wort „Umgang“
+stammt von mir, im Modell hat diese Dreiheit noch keinen eigenen Namen:
 
 - **Wie stark engage und disengage wirken:** um einen festen Betrag (0,4), als
   neue Erfahrung im AUI. Disengage schwächt höchstens so weit, wie das Thema
@@ -110,14 +112,19 @@ Zu den Erinnerungen:
 - **Die Erinnerung verstärkt nichts:** Verlässt die MBI sie wieder, ist alles
   so verblasst wie zuvor. Festhalten kann sie etwas nur durch engage.
 
-Zur Haltung als Gebiet:
+Zur Haltung:
 
-- **Was zur Haltung gehört:** alles, wozu die MBI engaged oder disengaged hat.
-  Diese Erfahrungen gehören zugleich zu dem Gebiet, in dem die MBI dabei
-  agiert hat. In der Haltung zählen sie voll, alles andere wird mit halber
-  Stärke mitgeführt.
-- **Wie die MBI dorthin kommt:** durch einen Themenwechsel, wie in die Sinne
-  oder die Erinnerung.
+- **Wann das AUI eine Haltung enthält:** wenn es Erfahrungen enthält, die in
+  dieser Haltung gemacht wurden. Jede Erfahrung trägt die Haltung in sich, in
+  der die MBI dabei war.
+- **Wie stark eine frühere Haltung auftaucht:** so stark wie das stärkste
+  Thema, das sie enthält. Ist das stark genug, taucht sie neben den Themen im
+  Feld der ABI auf.
+- **Welche Haltungen auftauchen:** nur Themengebiete, und nur solche, in denen
+  die MBI gerade nicht ist. Die Sinne, die jetzige Erfahrung und die
+  Erinnerung tauchen nicht als frühere Haltung auf.
+- **Nur die MBI erschafft eine Haltung:** Eine frühere Haltung, die auftaucht,
+  wird nicht von selbst zum Gebiet. Dafür muss die MBI darauf engagen.
 
 Zu den Themengebieten ohne MBI:
 
