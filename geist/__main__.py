@@ -7,6 +7,7 @@
     python -m geist --demo erinnerung  wie die MBI in die Erinnerung wechselt
     python -m geist --demo gewohnheit  wie wiederholtes engage ein Thema prägt
     python -m geist --demo emotion     wie Emotion und Erfahrung zusammen auftauchen
+    python -m geist --demo einfluss    wie ein Gebiet durch Erfahrung an Einfluss gewinnt
 
 Ein Thema mit Gewohnheit trägt in der Anzeige die Marke ↻ und die Zahl, wie
 oft die MBI dazu engaged hat, abzüglich der Male, die sie disengaged hat.
@@ -16,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import random
+from typing import Mapping
 
 from .modell import (
     EMOTION,
@@ -46,17 +48,22 @@ BESONDERE_GEBIETE = {
 ERLEBEN = {"s": SINNE, "e": EMOTION, "k": KOERPER}
 
 
-def benenne(gebiete: tuple[str, ...]) -> str:
+def benenne(gebiete: tuple[str, ...], einfluss: Mapping[str, float] | None = None) -> str:
+    """Nennt die Gebiete, auf Wunsch mit ihrem Einfluss in Prozent."""
     namen = [
         g if g in BESONDERE_GEBIETE.values() else f"Themengebiet {g}" for g in gebiete
     ]
+    if einfluss is not None:
+        namen = [
+            f"{name} (Einfluss {einfluss.get(g, 0.0):.0%})" for name, g in zip(namen, gebiete)
+        ]
     return " + ".join(namen)
 
 
 def zeige(moment: Moment, schwelle: float) -> None:
-    kopf = f"\nMoment {moment.zeit} · Haltung der MBI: {benenne(moment.gebiete)}"
+    kopf = f"\nMoment {moment.zeit} · Haltung der MBI: {benenne(moment.gebiete, moment.einfluss)}"
     if moment.gebiete_ohne_mbi:
-        kopf += f" · ohne MBI: {benenne(moment.gebiete_ohne_mbi)}"
+        kopf += f" · ohne MBI: {benenne(moment.gebiete_ohne_mbi, moment.einfluss)}"
     print(kopf)
 
     impulse = {i.thema: i for i in moment.aui_feld}
@@ -134,7 +141,7 @@ def demo_umgang() -> None:
         return Entscheidung(umgang)
 
     # Fester Zufall, damit der Ablauf jedes Mal gleich ist.
-    geist = Geist(entscheider, "Arbeit", zufall=random.Random(7))
+    geist = Geist(entscheider, "Arbeit", zufall=random.Random(7), mitnahme=0.5)
     for thema in ("Sorge", "Hunger", "Ohrwurm"):
         geist.unterbewusstsein.erlebe(Erfahrung(thema, 1.0, 0, ("Zuhause",)))
     for _ in range(7):
@@ -160,6 +167,7 @@ def demo_gebiete() -> None:
         lambda lage: ablauf.get(geist.zeit, Entscheidung()),
         "Familie",
         chance=0.0,
+        mitnahme=0.5,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 1.0, 0, ("Familie",)))
     for _ in range(5):
@@ -187,6 +195,7 @@ def demo_erinnerung() -> None:
         lambda lage: ablauf.get(geist.zeit, Entscheidung()),
         "Familie",
         chance=0.0,
+        mitnahme=0.5,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Streit", 0.9, -10, ("Familie",)))
     for _ in range(4):
@@ -216,6 +225,7 @@ def demo_haltung() -> None:
         lambda lage: ablauf.get(geist.zeit, Entscheidung()),
         "Arbeit",
         chance=0.0,
+        mitnahme=0.5,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 1.0, 0, ("Familie",)))
     for _ in range(5):
@@ -235,7 +245,7 @@ def demo_gewohnheit() -> None:
     def entscheider(lage: Lage) -> Entscheidung:
         return Entscheidung({"Grübeln": Umgang.ENGAGE} if geist.zeit < 3 else {})
 
-    geist = Geist(entscheider, "Abend", chance=0.0, kapazitaet=3.0)
+    geist = Geist(entscheider, "Abend", chance=0.0, kapazitaet=3.0, mitnahme=0.5)
     for thema in ("Grübeln", "Ohrwurm"):
         geist.unterbewusstsein.erlebe(Erfahrung(thema, 0.8, 0, ("Abend",)))
     for _ in range(9):
@@ -254,13 +264,38 @@ def demo_emotion() -> None:
     """
     sinne = {0: {"Streit": 0.9}, 6: {"Streit": 0.9}}
     emotion = {0: {"Wut": 0.7}}
-    geist = Geist(lambda lage: Entscheidung(), SINNE, chance=0.0)
+    geist = Geist(lambda lage: Entscheidung(), SINNE, chance=0.0, mitnahme=0.5)
     for zeit in range(8):
         moment = geist.schritt(sinne.get(zeit), emotion.get(zeit))
         zeige(moment, geist.automatisch.schwelle)
 
 
+def demo_einfluss() -> None:
+    """Ein Gebiet gewinnt durch Erfahrung an Einfluss auf die Impulse des AUI.
+
+    Die MBI ist im Hobby, einem Gebiet, in dem sie noch kaum etwas erlebt hat.
+    Es hat deshalb wenig Einfluss, und die Sorge aus der Familie kommt fast
+    ungebremst mit. Die MBI engaged nun Moment für Moment zum Malen. Mit jeder
+    Erfahrung wächst der Einfluss des Hobbys, und es drängt die Sorge immer
+    weiter zurück, bis sie aus dem Feld der ABI verschwindet. Damit man nur
+    diese Wirkung sieht, verblasst hier nichts von selbst, die Kapazität ist
+    groß, und Themengebiete ohne die MBI sind abgeschaltet.
+    """
+    geist = Geist(
+        lambda lage: Entscheidung({"Malen": Umgang.ENGAGE}),
+        "Hobby",
+        nachklang=1.0,
+        kapazitaet=9.0,
+        chance=0.0,
+    )
+    geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 0.9, 0, ("Familie",)))
+    geist.unterbewusstsein.erlebe(Erfahrung("Malen", 0.5, 0, ("Hobby",)))
+    for _ in range(5):
+        zeige(geist.schritt(), geist.automatisch.schwelle)
+
+
 DEMOS = {
+    "einfluss": demo_einfluss,
     "gewohnheit": demo_gewohnheit,
     "emotion": demo_emotion,
     "haltung": demo_haltung,

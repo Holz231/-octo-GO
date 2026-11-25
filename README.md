@@ -14,6 +14,7 @@ welche Lücken das Programm vorläufig mit eigenen Annahmen füllt.
     python -m geist --demo erinnerung  # wie die MBI in die Erinnerung wechselt
     python -m geist --demo gewohnheit  # wie wiederholtes engage ein Thema prägt
     python -m geist --demo emotion     # wie Emotion und Erfahrung zusammen auftauchen
+    python -m geist --demo einfluss    # wie ein Gebiet durch Erfahrung an Einfluss gewinnt
     python -m geist                    # interaktiv: du bist die MBI
     python -m pytest                   # Tests
 
@@ -93,9 +94,12 @@ Festgelegt:
 13. Eine Erfahrung und eine Emotion sind grundsätzlich eigene Themen. Sie
     können aber verstärkt zusammen auftauchen.
 
-Festgehalten, aber noch nicht eingebaut: Körperzustände wie Müdigkeit oder
-Anspannung können sich darauf auswirken, wie viele Impulse das AUI erzeugt.
-Im Programm sind sie vorerst unabhängige eigene Themen.
+14. Jedes Themengebiet beeinflusst die Impulse des AUI, im vollen Spektrum von
+    stark bis gar nicht. Wie stark, ist durch Erfahrung gelernt.
+
+Festgehalten, aber noch nicht eingebaut: Ein Themengebiet kann dazu führen,
+dass das AUI insgesamt mehr oder weniger Impulse erzeugt, etwa Müdigkeit oder
+Anspannung. Offen ist, was entscheidet, ob es mehr oder weniger werden.
 
 ## 3. Vorläufige Annahmen im Programm
 
@@ -122,6 +126,23 @@ stammt von mir, im Modell hat diese Dreiheit noch keinen eigenen Namen:
 - **Themenwechsel in die Sinne oder die jetzige Erfahrung:** Auch dorthin
   kommt die MBI durch einen Themenwechsel.
 - **Themenerhalt:** Tut die MBI nichts, bleibt sie in ihren Gebieten.
+
+Zum Einfluss der Gebiete auf die Impulse des AUI. Eingebaut sind zwei Wege:
+Ein Gebiet drängt zurück, was nicht zu ihm gehört, und ein Thema zieht
+bestimmte andere Themen mit (siehe „Zum gemeinsamen Auftauchen“).
+
+- **Woran der Einfluss gelernt wird:** an der Menge der Erfahrung im Gebiet.
+  Jede Erfahrung dort und jedes engage dort zählen dazu, jedes disengage dort
+  zählt ab.
+- **Wie schnell er wächst:** Ein Gebiet ohne Erfahrung hat keinen Einfluss.
+  Nach zwei Erfahrungen hat es den halben, nach vier drei Viertel, nach acht
+  fast den vollen.
+- **Wie er wirkt:** Ist die MBI in dem Gebiet, kommt alles, was nicht
+  dazugehört, nur mit dem Rest der Stärke mit: bei 75 % Einfluss mit einem
+  Viertel. Das ersetzt die frühere feste halbe Stärke.
+- **Bei mehreren Gebieten** bestimmt das einflussreichste.
+- **In den Demo-Läufen** außer `einfluss` ist der Einfluss auf 50 % festgelegt,
+  damit jeder Lauf nur seinen eigenen Punkt zeigt.
 
 Zur Gewohnheit:
 
@@ -206,8 +227,8 @@ Zu den Themengebieten ohne MBI:
 Zu den Gebieten:
 
 - **Wie sich das AUI an den Gebieten orientiert:** Erfahrungen aus den
-  jetzigen Gebieten zählen voll. Erfahrungen aus anderen Gebieten kommen mit
-  halber Stärke mit.
+  jetzigen Gebieten zählen voll. Erfahrungen aus anderen Gebieten kommen
+  abgeschwächt mit, je nach Einfluss der jetzigen Gebiete.
 - **Was zu einem Themengebiet gehört:** das Thema, aus dem es entstanden ist,
   und alles, wozu die MBI dort engaged oder disengaged hat.
 - **Was zu den Sinnen gehört:** jeder sensorische Eindruck, egal in welchem

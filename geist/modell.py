@@ -47,6 +47,9 @@ Mit etwas, das nur im AUI liegt, kann die MBI nicht umgehen. Sie kann aber
 Erinnerungen aktivieren. Die Erinnerung ist dabei nur ein anderes Gebiet: Die
 MBI aktiviert sie, indem sie ihr Thema dorthin wechselt.
 
+Jedes Themengebiet beeinflusst die Impulse des AUI, von stark bis gar nicht.
+Wie stark, ist durch Erfahrung gelernt.
+
 Gewohnheit entsteht durch Wiederholung: Je öfter die MBI zu einem Thema
 engaged, desto langsamer verblasst es im AUI. Engage und disengage geschehen
 aber nie von allein, es ist immer die MBI.
@@ -187,15 +190,20 @@ class Unterbewusstsein:
     def __init__(
         self,
         nachklang: float = 0.8,
-        mitnahme: float = 0.5,
+        mitnahme: float | None = None,
         praegung: float = 0.5,
         kopplung: float = 0.5,
+        lerntempo: float = 2.0,
     ):
         # ANNAHME: Eine Erfahrung wirkt pro Moment um diesen Faktor schwächer nach.
         self.nachklang = nachklang
-        # ANNAHME: Erfahrungen aus anderen Gebieten kommen mit diesem Anteil
-        # ihrer Stärke mit. Die aus den jetzigen Gebieten zählen voll.
+        # Mit welchem Anteil ihrer Stärke Erfahrungen aus anderen Gebieten
+        # mitkommen. None heißt: Das hängt vom gelernten Einfluss der Gebiete
+        # ab, in denen die MBI ist. Eine Zahl legt den Anteil stattdessen fest.
         self.mitnahme = mitnahme
+        # ANNAHME: Nach so vielen Erfahrungen in einem Gebiet hat es den halben
+        # Einfluss, nach doppelt so vielen drei Viertel und so weiter.
+        self.lerntempo = lerntempo
         # ANNAHME: Wie stark jedes engage oder disengage das Verblassen eines
         # Themas verlangsamt oder beschleunigt.
         self.praegung = praegung
@@ -230,6 +238,20 @@ class Unterbewusstsein:
             return self.nachklang ** (1 / (1 + self.praegung * gewohnheit))
         return self.nachklang ** (1 - self.praegung * gewohnheit)
 
+    def einfluss(self, gebiet: str) -> float:
+        """Wie stark ein Gebiet zurückdrängt, was nicht zu ihm gehört: 0 bis 1."""
+        if self.mitnahme is not None:
+            return 1 - self.mitnahme
+        # ANNAHME: Der Einfluss ist durch Erfahrung gelernt. Er wächst mit
+        # allem, was in dem Gebiet erlebt oder dort durch engage verstärkt
+        # wurde, und schrumpft mit jedem disengage dort.
+        menge = sum(
+            1 if e.staerke > 0 else -1
+            for e in self.erfahrungen
+            if gebiet in e.gebiete or e.thema == gebiet
+        )
+        return 1 - 0.5 ** (max(0, menge) / self.lerntempo)
+
     def verknuepfe(self, themen: Collection[str]) -> None:
         """Hält fest, dass diese Themen im selben Moment erlebt wurden."""
         themen = sorted(set(themen))
@@ -252,6 +274,9 @@ class Unterbewusstsein:
         Gebiete der MBI unter `gebiete`; ohne Angabe sind es alle.
         """
         haltung = gebiete if haltung is None else haltung
+        # Das einflussreichste Gebiet bestimmt, wie viel von allem, was nicht
+        # dazugehört, noch mitkommt.
+        mitnahme = 1 - max((self.einfluss(g) for g in gebiete), default=0.0)
         staerken: dict[str, float] = {}
         aus_haltung: dict[str, float] = {}  # Thema -> Stärke aus der Haltung der MBI
         eigene: dict[str, dict[str, float]] = {}  # Gebiet der MBI -> Thema -> Stärke
@@ -269,7 +294,7 @@ class Unterbewusstsein:
                     gehoert_zum_gebiet(e, g, im_abi_feld) for g in gebiete
                 )
                 if mitgefuehrt:
-                    beitrag *= self.mitnahme
+                    beitrag *= mitnahme
             staerken[e.thema] = staerken.get(e.thema, 0.0) + beitrag
             zugehoerig = [
                 g
@@ -508,6 +533,7 @@ class Moment:
     aui_feld: tuple[Impuls, ...]  # alles, was im Feld des AUI liegt
     abi_feld: tuple[Impuls, ...]  # der Teil, der auch im Feld der ABI auftaucht
     umgang: Mapping[str, Umgang]  # Thema -> Umgang der MBI
+    einfluss: Mapping[str, float]  # Gebiet -> wie stark es Fremdes zurückdrängt
     verdraengt: tuple[str, ...]  # Gebiete, die nicht mehr in die Kapazität passten
     # Die Gebiete, wie sie ab dem nächsten Moment gelten.
     gebiete_danach: tuple[str, ...]
@@ -524,7 +550,7 @@ class Geist:
         *,
         kapazitaet: float = 1.0,
         nachklang: float = 0.8,
-        mitnahme: float = 0.5,
+        mitnahme: float | None = None,
         praegung: float = 0.5,
         kopplung: float = 0.5,
         schwelle: float = 0.3,
@@ -564,6 +590,9 @@ class Geist:
         # ANNAHME: Was im Feld der ABI auftaucht, bemisst sich am Feld, wie es
         # zu Beginn des Moments ist, also am Ergebnis des vorigen Moments.
         bisher_im_abi_feld = {impuls.thema for impuls in self.automatisch.feld}
+        einfluss = {
+            g: self.unterbewusstsein.einfluss(g) for g in gebiete + gebiete_ohne_mbi
+        }
         # ANNAHME: AUI und ABI orientieren sich auch an den Themengebieten, die
         # ohne die MBI entstanden sind.
         aui_feld = self.unterbewusstsein.erzeuge_impulse(
@@ -607,6 +636,7 @@ class Geist:
             tuple(aui_feld),
             lage.abi_feld,
             umgang,
+            einfluss,
             tuple(verdraengt),
             tuple(self.manuell.gebiete),
             tuple(self.automatisch.gebiete_ohne_mbi),

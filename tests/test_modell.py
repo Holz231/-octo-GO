@@ -29,12 +29,24 @@ def nach_plan(plan):
     return lambda lage: plan.get(next(momente), Entscheidung())
 
 
-def geist_mit(entscheider=nichts, gebiet=GEBIET, erfahrungen=(), chance=0.0, **kwargs):
-    """Ein Geist ohne Zufall, solange `chance` nicht gesetzt wird."""
-    geist = Geist(entscheider, gebiet, chance=chance, **kwargs)
+def geist_mit(
+    entscheider=nichts, gebiet=GEBIET, erfahrungen=(), chance=0.0, mitnahme=0.5, **kwargs
+):
+    """Ein Geist ohne Zufall und mit festem Einfluss der Gebiete.
+
+    Fremdes kommt hier immer mit halber Stärke mit, solange `mitnahme` nicht
+    anders gesetzt wird. `mitnahme=None` lässt den Einfluss durch Erfahrung
+    entstehen, wie im Modell.
+    """
+    geist = Geist(entscheider, gebiet, chance=chance, mitnahme=mitnahme, **kwargs)
     for e in erfahrungen:
         geist.unterbewusstsein.erlebe(e)
     return geist
+
+
+def aui(mitnahme=0.5, **kwargs):
+    """Ein AUI mit festem Einfluss der Gebiete, siehe `geist_mit`."""
+    return Unterbewusstsein(mitnahme=mitnahme, **kwargs)
 
 
 def erfahrung(thema, staerke, gebiet=GEBIET, zeit=0):
@@ -84,7 +96,7 @@ def test_impulse_entstehen_aus_vorherigen_und_jetzigen_erfahrungen():
 
 
 def test_erfahrungen_klingen_nach_und_werden_schwaecher():
-    unterbewusstsein = Unterbewusstsein(nachklang=0.5)
+    unterbewusstsein = aui(nachklang=0.5)
     unterbewusstsein.erlebe(erfahrung("Thema", 0.8))
     assert unterbewusstsein.erzeuge_impulse(0, [GEBIET])[0].staerke == 0.8
     assert unterbewusstsein.erzeuge_impulse(1, [GEBIET])[0].staerke == 0.4
@@ -361,7 +373,7 @@ def test_themenwechsel_ersetzt_alle_gebiete_der_haltung():
 
 
 def test_aui_orientiert_sich_am_gebiet_der_mbi():
-    unterbewusstsein = Unterbewusstsein(mitnahme=0.5)
+    unterbewusstsein = aui()
     unterbewusstsein.erlebe(erfahrung("Sorge", 0.8, gebiet="Familie"))
 
     (daheim,) = themen(unterbewusstsein.erzeuge_impulse(0, ["Familie"]))
@@ -488,7 +500,7 @@ def test_mit_dem_was_nur_im_aui_liegt_gibt_es_keinen_umgang():
 
 
 def test_in_der_erinnerung_zaehlt_frueheres_unverblasst_egal_aus_welchem_gebiet():
-    unterbewusstsein = Unterbewusstsein()
+    unterbewusstsein = aui()
     unterbewusstsein.erlebe(VERBLASSTER_STREIT[0])
 
     (verblasst,) = themen(unterbewusstsein.erzeuge_impulse(0, ["Familie"]))
@@ -561,7 +573,7 @@ def test_die_haltung_in_der_die_mbi_gerade_ist_taucht_nicht_als_fruehere_auf():
 
 
 def test_haltung_taucht_so_stark_auf_wie_ihr_staerkstes_thema():
-    unterbewusstsein = Unterbewusstsein()
+    unterbewusstsein = aui()
     unterbewusstsein.erlebe(erfahrung("Sorge", 0.8, "Familie"))
     unterbewusstsein.erlebe(erfahrung("Streit", 0.4, "Familie"))
 
@@ -689,7 +701,7 @@ def test_ein_einzelnes_gebiet_wird_nie_verdraengt():
 
 
 def test_ein_gebiet_ohne_eigenes_thema_wiegt_so_viel_wie_sein_staerkstes_anderes_thema():
-    unterbewusstsein = Unterbewusstsein()
+    unterbewusstsein = aui()
     unterbewusstsein.erlebe(erfahrung("Sorge", 0.8, "Familie"))
     unterbewusstsein.erlebe(erfahrung("Streit", 0.3, "Familie"))
     unterbewusstsein.erzeuge_impulse(0, ["Familie", "Sorge"])
@@ -727,7 +739,7 @@ def test_engage_und_disengage_geschehen_nie_von_allein():
 
 
 def test_je_oefter_engaged_desto_langsamer_verblasst_das_thema():
-    unterbewusstsein = Unterbewusstsein(nachklang=0.8)
+    unterbewusstsein = aui(nachklang=0.8)
     unterbewusstsein.gewohnheit = {"Oft": 3, "Einmal": 1, "Abgewöhnt": -2}
     nachklang = unterbewusstsein.nachklang_fuer
 
@@ -736,7 +748,7 @@ def test_je_oefter_engaged_desto_langsamer_verblasst_das_thema():
 
 
 def test_gewohnheit_wirkt_auf_neue_erfahrungen_nicht_auf_fruehere():
-    unterbewusstsein = Unterbewusstsein(nachklang=0.8)
+    unterbewusstsein = aui(nachklang=0.8)
     unterbewusstsein.erlebe(erfahrung("Thema", 0.5))
     unterbewusstsein.uebe("Thema", 1)
     unterbewusstsein.erlebe(erfahrung("Thema", 0.5))
@@ -808,7 +820,7 @@ def test_mbi_kann_eine_emotion_aufgreifen_wenn_sie_stark_genug_auftaucht():
 
 
 def aui_mit_streit(gemeinsam_erlebt):
-    unterbewusstsein = Unterbewusstsein(kopplung=0.5)
+    unterbewusstsein = aui(kopplung=0.5)
     unterbewusstsein.erlebe(Erfahrung("Streit", 0.8, 0, (SINNE,)))
     for _ in range(gemeinsam_erlebt):
         unterbewusstsein.verknuepfe(["Streit", "Wut"])
@@ -860,3 +872,70 @@ def test_verklungenes_taucht_wieder_auf_wenn_sein_partner_auftaucht():
 
     assert "Wut" not in im_feld(verklungen)
     assert "Wut" in im_feld(wieder_da)
+
+
+# --- Jedes Gebiet beeinflusst die Impulse des AUI, gelernt durch Erfahrung ---
+
+
+def gelerntes_aui(erfahrungen_im_hobby):
+    unterbewusstsein = aui(mitnahme=None, nachklang=1.0)
+    unterbewusstsein.erlebe(erfahrung("Sorge", 0.8, "Familie"))
+    for _ in range(erfahrungen_im_hobby):
+        unterbewusstsein.erlebe(erfahrung("Malen", 0.1, "Hobby"))
+    return unterbewusstsein
+
+
+def test_ein_gebiet_ohne_erfahrung_hat_keinen_einfluss():
+    unterbewusstsein = gelerntes_aui(erfahrungen_im_hobby=0)
+    (sorge,) = themen(unterbewusstsein.erzeuge_impulse(0, ["Hobby"]))
+
+    assert unterbewusstsein.einfluss("Hobby") == 0.0
+    # Die Sorge kommt aus der Familie mit, wird aber nicht zurückgedrängt.
+    assert (sorge.staerke, sorge.mitgebracht_aus) == (0.8, ("Familie",))
+
+
+def test_der_einfluss_waechst_mit_der_erfahrung_im_gebiet():
+    einfluss = [gelerntes_aui(n).einfluss("Hobby") for n in (0, 2, 4, 8)]
+    assert einfluss == [0.0, 0.5, 0.75, 0.9375]
+
+
+def test_je_mehr_einfluss_desto_staerker_wird_fremdes_zurueckgedraengt():
+    def sorge_im_hobby(erfahrungen):
+        feld = gelerntes_aui(erfahrungen).erzeuge_impulse(0, ["Hobby"])
+        return next(i.staerke for i in feld if i.thema == "Sorge")
+
+    assert [sorge_im_hobby(n) for n in (0, 2, 4)] == [0.8, 0.4, 0.2]
+
+
+def test_was_zum_gebiet_gehoert_wird_nicht_zurueckgedraengt():
+    feld = gelerntes_aui(erfahrungen_im_hobby=4).erzeuge_impulse(0, ["Hobby"])
+    assert next(i.staerke for i in feld if i.thema == "Malen") == 0.4
+
+
+def test_engage_im_gebiet_laesst_seinen_einfluss_wachsen_und_disengage_schrumpfen():
+    def einfluss_nach(umgang):
+        geist = geist_mit(
+            immer(umgang, "Malen"),
+            "Hobby",
+            [erfahrung("Malen", 0.8, "Hobby")],
+            mitnahme=None,
+        )
+        vorher = geist.unterbewusstsein.einfluss("Hobby")
+        geist.schritt()
+        return vorher, geist.unterbewusstsein.einfluss("Hobby")
+
+    vorher, nach_engage = einfluss_nach(Umgang.ENGAGE)
+    _, nach_disengage = einfluss_nach(Umgang.DISENGAGE)
+
+    assert nach_engage > vorher > nach_disengage
+
+
+def test_bei_mehreren_gebieten_bestimmt_das_einflussreichste():
+    unterbewusstsein = gelerntes_aui(erfahrungen_im_hobby=4)
+    feld = unterbewusstsein.erzeuge_impulse(0, ["Hobby", "Neuland"])
+    assert next(i.staerke for i in feld if i.thema == "Sorge") == 0.2
+
+
+def test_der_moment_zeigt_den_einfluss_der_gebiete():
+    geist = geist_mit(gebiet="Hobby", erfahrungen=[erfahrung("Malen", 0.5, "Hobby")] * 2, mitnahme=None)
+    assert geist.schritt().einfluss == {"Hobby": 0.5}
