@@ -1,0 +1,558 @@
+<title>Geistmodell</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+  /* Aufbau: links das, was gerade da ist und was man tut; rechts Haltung und Verlauf.
+     Das Feld des AUI liegt im Schatten, das der ABI im Licht, mit der Grenze dazwischen. */
+  :root {
+    --grund: #eef1f6;
+    --flaeche: #ffffff;
+    --tinte: #1a2134;
+    --leise: #56617a;
+    --linie: #d3d9e6;
+    --akzent: #3a4bd0;
+    --akzent-tinte: #ffffff;
+    --aui: #d9deea;
+    --abi: #f8fafd;
+    --balken: #66718f;
+    --heilsam: #1b7f68;
+    --unheilsam: #bb3f2a;
+    --schrift: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --titel: "Space Grotesk", "Inter", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --grund: #10131b;
+      --flaeche: #191e2a;
+      --tinte: #e7eaf3;
+      --leise: #9ba5bb;
+      --linie: #2d3547;
+      --akzent: #93a3ff;
+      --akzent-tinte: #10131b;
+      --aui: #131722;
+      --abi: #252d3f;
+      --balken: #8d98b5;
+      --heilsam: #55c7a6;
+      --unheilsam: #f08a73;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --grund: #10131b;
+    --flaeche: #191e2a;
+    --tinte: #e7eaf3;
+    --leise: #9ba5bb;
+    --linie: #2d3547;
+    --akzent: #93a3ff;
+    --akzent-tinte: #10131b;
+    --aui: #131722;
+    --abi: #252d3f;
+    --balken: #8d98b5;
+    --heilsam: #55c7a6;
+    --unheilsam: #f08a73;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--grund);
+    color: var(--tinte);
+    font-family: var(--schrift);
+    font-size: 15px;
+    line-height: 1.5;
+    padding-block: 1.25rem 3rem;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  h1, h2 { font-family: var(--titel); text-wrap: balance; margin: 0; }
+  h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 1.05rem; font-weight: 500; }
+  p { margin: 0; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+
+  .seite { max-width: 68rem; margin: 0 auto; display: grid; gap: 1.25rem; }
+  .kopf { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1rem; }
+  .kopf .moment { color: var(--leise); font-variant-numeric: tabular-nums; }
+  .kopf .beispiel { color: var(--leise); font-size: 0.85rem; margin-left: auto; }
+  .spalten { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 60rem) { .spalten { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); align-items: start; } }
+  .stapel { display: grid; gap: 1.25rem; min-width: 0; }
+
+  .tafel { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 10px; padding: 1rem; display: grid; gap: 0.75rem; min-width: 0; }
+  .tafel > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
+  .hinweis { color: var(--leise); font-size: 0.85rem; }
+  .etikett { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--leise); }
+
+  /* Die beiden Felder */
+  .felder ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; }
+  .feldkopf, .impuls .zeile { display: grid; grid-template-columns: minmax(0, 1fr) 3.2rem; gap: 0.5rem; align-items: center; }
+  .feldkopf .namen { display: grid; grid-template-columns: 30% 70%; }
+  .feldkopf .namen span:last-child { padding-left: 0.5rem; }
+  .impuls { padding: 0.5rem 0; border-top: 1px solid var(--linie); display: grid; gap: 0.35rem; }
+  .impuls .name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; font-weight: 600; }
+  .impuls:not(.im-abi) .name { color: var(--leise); font-weight: 500; }
+  .marke { font-size: 0.75rem; font-weight: 500; color: var(--leise); border: 1px solid var(--linie); border-radius: 999px; padding: 0 0.5rem; white-space: nowrap; }
+  .marke.heilsam { color: var(--heilsam); border-color: currentColor; }
+  .marke.negativ, .marke.sog { color: var(--unheilsam); border-color: currentColor; }
+  .marke.gebiet { color: var(--akzent); border-color: currentColor; }
+  .balken { position: relative; height: 0.9rem; border-radius: 3px; overflow: hidden; background: linear-gradient(to right, var(--aui) 0 30%, var(--abi) 30% 100%); border: 1px solid var(--linie); }
+  .balken::after { content: ""; position: absolute; inset: 0 auto 0 30%; width: 2px; background: var(--tinte); opacity: 0.55; }
+  .fuellung { display: block; height: 100%; background: var(--balken); }
+  .impuls.negativ .fuellung { background: var(--unheilsam); }
+  .impuls.heilsam .fuellung { background: var(--heilsam); }
+  .impuls.fruehere-haltung .fuellung { background: repeating-linear-gradient(135deg, var(--balken) 0 5px, transparent 5px 9px); }
+  .zahl { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* Umgang: fünf Möglichkeiten je Thema im Feld der ABI */
+  .umgang { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .umgang label { position: relative; }
+  .umgang input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .umgang span { display: block; padding: 0.15rem 0.6rem; border: 1px solid var(--linie); border-radius: 999px; font-size: 0.82rem; background: var(--flaeche); }
+  .umgang input:checked + span { background: var(--akzent); border-color: var(--akzent); color: var(--akzent-tinte); }
+  .umgang input:focus-visible + span { outline: 2px solid var(--akzent); outline-offset: 2px; }
+  .umgang label.unheilsam input:checked + span { background: var(--unheilsam); border-color: var(--unheilsam); }
+
+  /* Haltung */
+  .haltung { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem 2rem; align-items: start; }
+  .gebiete { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .spektrum { display: grid; gap: 0.4rem; min-width: 0; }
+  .skala { position: relative; height: 0.7rem; border-radius: 999px; background: linear-gradient(to right, var(--unheilsam), var(--linie) 50%, var(--heilsam)); }
+  .zeiger { position: absolute; top: -0.25rem; width: 4px; height: 1.2rem; margin-left: -2px; border-radius: 2px; background: var(--tinte); }
+  .skalenenden { display: flex; justify-content: space-between; }
+  .messer { height: 0.5rem; border-radius: 999px; background: var(--aui); overflow: hidden; }
+  .messer span { display: block; height: 100%; background: var(--akzent); }
+  .messer.voll span { background: var(--unheilsam); }
+
+  /* Eingaben */
+  .reihe { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+  .reihe label { display: grid; gap: 0.15rem; min-width: 0; }
+  input[type="text"], select { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 6px; padding: 0.35rem 0.5rem; max-width: 100%; }
+  input[type="range"] { accent-color: var(--akzent); width: 8rem; max-width: 100%; }
+  .knopf { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 6px; padding: 0.35rem 0.8rem; cursor: pointer; }
+  .knopf:hover { border-color: var(--akzent); }
+  .knopf.haupt { background: var(--akzent); border-color: var(--akzent); color: var(--akzent-tinte); font-weight: 600; padding: 0.6rem 1.2rem; justify-self: start; }
+  .eindruecke { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .eindruck { display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--linie); border-radius: 999px; padding: 0.1rem 0.25rem 0.1rem 0.65rem; font-size: 0.85rem; }
+  .eindruck button { border: 0; background: none; cursor: pointer; padding: 0 0.35rem; color: var(--leise); font-size: 1rem; line-height: 1; }
+
+  /* Verlauf */
+  .verlauf ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; max-height: 26rem; overflow-y: auto; }
+  .verlauf li { border-top: 1px solid var(--linie); padding-top: 0.5rem; display: grid; gap: 0.15rem; font-size: 0.88rem; }
+  .verlauf li:first-child { border-top: 0; padding-top: 0; }
+  .verlauf .wann { font-weight: 600; }
+  .verlauf .ereignis.unheilsam { color: var(--unheilsam); }
+  .verlauf .ereignis.heilsam { color: var(--heilsam); }
+  details summary { cursor: pointer; font-family: var(--titel); font-weight: 500; }
+  details .inhalt { display: grid; gap: 0.6rem; padding-top: 0.75rem; max-width: 65ch; }
+  dl { margin: 0; display: grid; gap: 0.5rem; }
+  dt { font-weight: 600; }
+  dd { margin: 0; color: var(--leise); }
+  @media (prefers-reduced-motion: no-preference) { .fuellung, .zeiger { transition: width 0.25s ease, left 0.25s ease; } }
+</style>
+
+<div class="seite">
+  <header class="kopf">
+    <h1>Geistmodell</h1>
+    <span class="moment" id="moment"></span>
+    <span class="beispiel" id="beispielhinweis"></span>
+  </header>
+
+  <section class="tafel haltung" aria-labelledby="haltung-titel">
+    <div class="spektrum">
+      <h2 id="haltung-titel">Deine Haltung</h2>
+      <div class="gebiete" id="gebiete"></div>
+      <p class="hinweis" id="ohne-dich"></p>
+    </div>
+    <div class="spektrum">
+      <span class="etikett">Zwischen unheilsam und heilsam</span>
+      <div class="skala" role="img"><span class="zeiger" id="zeiger"></span></div>
+      <div class="skalenenden etikett"><span>unheilsam</span><span>heilsam</span></div>
+      <p id="haltung-wort"></p>
+    </div>
+    <div class="spektrum">
+      <span class="etikett">Kapazität belegt</span>
+      <div class="messer" id="kapazitaet"><span></span></div>
+      <p class="hinweis" id="kapazitaet-wort"></p>
+    </div>
+  </section>
+
+  <div class="spalten">
+    <div class="stapel">
+      <section class="tafel felder" aria-labelledby="felder-titel">
+        <header>
+          <h2 id="felder-titel">Was gerade da ist</h2>
+          <p class="hinweis" id="aufgekommen"></p>
+        </header>
+        <div class="feldkopf" aria-hidden="true">
+          <div class="namen etikett"><span>AUI</span><span>ABI</span></div>
+          <span class="etikett zahl">Stärke</span>
+        </div>
+        <ul id="impulse"></ul>
+        <p class="hinweis">Links das unbewusste Feld des AUI, rechts das bewusste der ABI. Ein Balken, der über die Grenze reicht, taucht in der ABI auf. Nur damit kannst du umgehen.</p>
+      </section>
+
+      <section class="tafel" aria-labelledby="tun-titel">
+        <header><h2 id="tun-titel">Wohin richtest du dich?</h2></header>
+        <div class="reihe">
+          <label><span class="etikett">Ausrichtung</span>
+            <select id="themenwechsel"></select>
+          </label>
+          <label id="neues-gebiet-feld" hidden><span class="etikett">Themengebiet</span>
+            <input type="text" id="neues-gebiet" placeholder="zum Beispiel Urlaub" autocomplete="off">
+          </label>
+        </div>
+        <p class="hinweis">Ein Themenwechsel verstärkt nichts im AUI und macht deine Haltung heilsamer. Den Umgang mit einzelnen Themen wählst du oben bei jedem Thema.</p>
+      </section>
+
+      <section class="tafel" aria-labelledby="erleben-titel">
+        <header><h2 id="erleben-titel">Was erlebst du im nächsten Moment?</h2></header>
+        <form class="reihe" id="eindruck-formular">
+          <label><span class="etikett">Gebiet</span>
+            <select id="eindruck-gebiet">
+              <option value="sinne">Sinne</option>
+              <option value="emotion">Emotion</option>
+              <option value="koerper">Körper</option>
+            </select>
+          </label>
+          <label><span class="etikett">Thema</span>
+            <input type="text" id="eindruck-thema" placeholder="zum Beispiel Lärm" autocomplete="off">
+          </label>
+          <label><span class="etikett">Stärke <output id="eindruck-wert" for="eindruck-staerke">0,50</output></span>
+            <input type="range" id="eindruck-staerke" min="0.05" max="1" step="0.05" value="0.5">
+          </label>
+          <button class="knopf" type="submit" id="eindruck-dazu">Hinzufügen</button>
+        </form>
+        <div class="eindruecke" id="eindruecke"></div>
+        <label class="reihe hinweis"><input type="checkbox" id="behalten"> Dasselbe in jedem weiteren Moment erleben</label>
+      </section>
+
+      <button class="knopf haupt" id="weiter" type="button">Nächster Moment</button>
+    </div>
+
+    <div class="stapel">
+      <section class="tafel verlauf" aria-labelledby="verlauf-titel">
+        <header><h2 id="verlauf-titel">Verlauf</h2></header>
+        <ol id="verlauf"></ol>
+      </section>
+
+      <section class="tafel">
+        <details id="neu-beginnen">
+          <summary>Neu beginnen</summary>
+          <div class="inhalt">
+            <div class="reihe">
+              <label><span class="etikett">Ausgangslage</span>
+                <select id="szenario"></select>
+              </label>
+              <label><span class="etikett">Haltung zu Beginn</span>
+                <input type="text" id="start-haltung" autocomplete="off">
+              </label>
+            </div>
+            <p class="hinweis" id="szenario-text"></p>
+            <button class="knopf" id="neu" type="button">Von vorn beginnen</button>
+          </div>
+        </details>
+      </section>
+
+      <section class="tafel">
+        <details id="erklaerung">
+          <summary>Was die Begriffe bedeuten</summary>
+          <div class="inhalt">
+            <dl>
+              <div><dt>AUI, automatisches Unterbewusstsein</dt><dd>Läuft ständig und erzeugt Impulse aus früheren und jetzigen Erfahrungen. Du siehst sein Feld hier, die MBI sieht es nie.</dd></div>
+              <div><dt>ABI, automatische bewusste Intention</dt><dd>Das angrenzende Feld. Was im AUI stark genug ist, taucht hier auf und wird wahrgenommen.</dd></div>
+              <div><dt>MBI, manuelle bewusste Intention</dt><dd>Das bist du. Du gehst mit dem um, was in der ABI auftaucht, und richtest dich aus.</dd></div>
+              <div><dt>Haltung</dt><dd>Das Gebiet, in dem du agierst: ein Themengebiet, die Sinne, die jetzige Erfahrung, die Erinnerung, die Emotion oder der Körper. Sie liegt zwischen heilsam und unheilsam.</dd></div>
+              <div><dt>engage und disengage</dt><dd>Verstärken oder schwächen ein Thema im AUI. Ohne Verlangen und Abneigung machen sie deine Haltung heilsamer.</dd></div>
+              <div><dt>Verlangen und Abneigung</dt><dd>Engage aus Verlangen und disengage aus Abneigung wirken auf das Thema genauso, machen deine Haltung aber unheilsamer und das Thema negativ.</dd></div>
+              <div><dt>lassen</dt><dd>Weder engage noch disengage. Das Thema kann dann von selbst zum Themengebiet werden oder verblassen. Ist es sehr stark, kann es dich mitreißen.</dd></div>
+              <div><dt>Zufall</dt><dd>Was das AUI kennt, kann von selbst wieder aufkommen. Je unheilsamer deine Haltung, desto öfter Negatives und desto eher wirst du mitgerissen.</dd></div>
+            </dl>
+          </div>
+        </details>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="geist.js"></script>
+<script>
+(function () {
+  "use strict";
+  const M = window.GeistModell;
+  const U = M.Umgang;
+  const $ = (id) => document.getElementById(id);
+
+  const SZENARIEN = [
+    {
+      name: "Sorge bei der Arbeit",
+      text: "Du bist bei der Arbeit. Aus der Familie bringst du eine Sorge mit, und eine Mail wartet.",
+      haltung: "Arbeit",
+      vorher: [
+        { thema: "Sorge", staerke: 0.9, gebiete: ["Familie"] },
+        { thema: "Mail", staerke: 0.5, gebiete: ["Arbeit"] },
+      ],
+      eindruecke: [],
+    },
+    {
+      name: "Unruhe am Abend",
+      text: "Du bist im Gebiet der Emotion. In jedem Moment kommt neue Unruhe auf.",
+      haltung: M.EMOTION,
+      vorher: [],
+      eindruecke: [{ gebiet: "emotion", thema: "Unruhe", staerke: 0.3 }],
+      behalten: true,
+    },
+    {
+      name: "Beim Atem bleiben",
+      text: "Du bist in den Sinnen und spürst den Atem. Ein Ohrwurm und eine Sorge sind noch da.",
+      haltung: M.SINNE,
+      vorher: [
+        { thema: "Ohrwurm", staerke: 0.7, gebiete: ["Alltag"] },
+        { thema: "Sorge", staerke: 0.8, gebiete: ["Familie"] },
+      ],
+      eindruecke: [{ gebiet: "sinne", thema: "Atem", staerke: 0.3 }],
+      behalten: true,
+    },
+    { name: "Leer beginnen", text: "Nichts ist vorgegeben. Wähle deine Haltung und gib ein, was du erlebst.", haltung: "Alltag", vorher: [], eindruecke: [] },
+  ];
+  const GEBIETSNAMEN = { sinne: M.SINNE, emotion: M.EMOTION, koerper: M.KOERPER };
+  const UMGANG = [
+    [U.WEDER_NOCH, "lassen", ""],
+    [U.ENGAGE, "engage", ""],
+    [U.DISENGAGE, "disengage", ""],
+    [U.VERLANGEN, "aus Verlangen", "unheilsam"],
+    [U.ABNEIGUNG, "aus Abneigung", "unheilsam"],
+  ];
+
+  let geist, lage, szenario;
+  let wahl = new Map();     // Thema -> gewählter Umgang in diesem Moment
+  let eindruecke = [];      // was im nächsten Moment erlebt wird
+  let verlauf = [];         // abgeschlossene Momente, neuester zuerst
+
+  const zahl = (wert) => wert.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const prozent = (wert) => Math.round(wert * 100) + " %";
+  const benenne = (gebiet) => (M.BESONDERE_GEBIETE.includes(gebiet) ? gebiet : "Themengebiet " + gebiet);
+  const benenne_alle = (gebiete) => gebiete.map(benenne).join(" + ");
+  function nenne_haltung(heilsamkeit) {
+    if (heilsamkeit > 0) return "heilsam " + prozent(heilsamkeit);
+    if (heilsamkeit < 0) return "unheilsam " + prozent(-heilsamkeit);
+    return "weder heilsam noch unheilsam";
+  }
+  function el(tag, eigenschaften = {}, kinder = []) {
+    const knoten = document.createElement(tag);
+    for (const [name, wert] of Object.entries(eigenschaften)) {
+      if (name === "text") knoten.textContent = wert;
+      else if (name === "class") knoten.className = wert;
+      else knoten.setAttribute(name, wert);
+    }
+    for (const kind of kinder) knoten.append(kind);
+    return knoten;
+  }
+
+  function sammle_eindruecke() {
+    const erlebtes = { sinne: {}, emotion: {}, koerper: {} };
+    for (const e of eindruecke) erlebtes[e.gebiet][e.thema] = e.staerke;
+    return erlebtes;
+  }
+
+  function beginne() {
+    const erlebtes = sammle_eindruecke();
+    lage = geist.beginne(erlebtes.sinne, erlebtes.emotion, erlebtes.koerper);
+    if (!$("behalten").checked) eindruecke = [];
+    wahl = new Map();
+  }
+
+  function starte(neues_szenario, haltung) {
+    szenario = neues_szenario;
+    geist = new M.Geist(haltung || szenario.haltung);
+    for (const e of szenario.vorher) geist.unterbewusstsein.erlebe({ ...e, zeit: 0 });
+    eindruecke = szenario.eindruecke.map((e) => ({ ...e }));
+    $("behalten").checked = Boolean(szenario.behalten);
+    verlauf = [];
+    beginne();
+    zeichne();
+  }
+
+  function lies_themenwechsel() {
+    const wert = $("themenwechsel").value;
+    if (wert === "") return null;
+    if (wert === "neu") return $("neues-gebiet").value.trim() || null;
+    return wert;
+  }
+
+  function beschreibe(moment, entscheidung) {
+    const ereignisse = [];
+    const getan = Object.entries(moment.umgang)
+      .filter(([thema, art]) => art !== U.WEDER_NOCH && !moment.mitgerissen.includes(thema))
+      .map(([thema, art]) => (art === U.VERLANGEN ? "engage aus Verlangen" : art === U.ABNEIGUNG ? "disengage aus Abneigung" : art) + " zu " + thema);
+    if (entscheidung.themenwechsel) {
+      const erhalt = moment.gebiete.length === 1 && moment.gebiete[0] === entscheidung.themenwechsel;
+      getan.push(erhalt ? "Themenerhalt" : "Themenwechsel: " + benenne(entscheidung.themenwechsel));
+    }
+    ereignisse.push({ text: "Du: " + (getan.length ? getan.join(", ") : "nichts getan") });
+    if (moment.aufgekommen.length) ereignisse.push({ text: "Im AUI von selbst aufgekommen: " + moment.aufgekommen.join(", ") });
+    for (const thema of moment.mitgerissen) ereignisse.push({ text: "Zu stark: Du richtest dich aus Verlangen auf " + thema, art: "unheilsam" });
+    if (moment.heilsamkeit_danach !== moment.heilsamkeit) {
+      const heilsamer = moment.heilsamkeit_danach > moment.heilsamkeit;
+      ereignisse.push({ text: "Haltung wird " + (heilsamer ? "heilsamer" : "unheilsamer") + ": " + nenne_haltung(moment.heilsamkeit_danach), art: heilsamer ? "heilsam" : "unheilsam" });
+    }
+    if (moment.verdraengt.length) ereignisse.push({ text: "Zu viel für dich, verdrängt wird: " + benenne_alle(moment.verdraengt) });
+    if (moment.gebiete_danach.join("|") !== moment.gebiete.join("|")) ereignisse.push({ text: "Neue Haltung: " + benenne_alle(moment.gebiete_danach) });
+    for (const g of moment.gebiete_ohne_mbi_danach) if (!moment.gebiete_ohne_mbi.includes(g)) ereignisse.push({ text: "Ohne dich wird zum Themengebiet: " + g });
+    for (const g of moment.gebiete_ohne_mbi) {
+      if (!moment.gebiete_ohne_mbi_danach.includes(g) && !moment.gebiete_danach.includes(g)) ereignisse.push({ text: "Themengebiet ohne dich löst sich auf: " + g });
+    }
+    return { zeit: moment.zeit, haltung: benenne_alle(moment.gebiete), ereignisse };
+  }
+
+  function weiter() {
+    const entscheidung = { umgang: Object.fromEntries(wahl), themenwechsel: lies_themenwechsel() };
+    const moment = geist.entscheide(entscheidung);
+    verlauf.unshift(beschreibe(moment, entscheidung));
+    $("neues-gebiet").value = "";
+    beginne();
+    zeichne();
+  }
+
+  function zeichne_felder() {
+    const liste = $("impulse");
+    liste.replaceChildren();
+    const im_abi = new Set(lage.abi_feld.map((i) => i.thema));
+    if (!lage.aui_feld.length) {
+      liste.append(el("li", { class: "impuls hinweis", text: "Im AUI liegt gerade nichts. Gib unten ein, was du erlebst." }));
+    }
+    lage.aui_feld.forEach((impuls, reihe) => {
+      const da = im_abi.has(impuls.thema);
+      const klassen = ["impuls"];
+      if (da) klassen.push("im-abi");
+      if (impuls.haltung) klassen.push("fruehere-haltung");
+      if (impuls.faerbung < 0) klassen.push("negativ");
+      if (impuls.faerbung > 0) klassen.push("heilsam");
+
+      const name = el("div", { class: "name" }, [el("span", { text: impuls.thema })]);
+      if (lage.gebiete.includes(impuls.thema)) name.append(el("span", { class: "marke gebiet", text: "deine Haltung" }));
+      else if (lage.gebiete_ohne_mbi.includes(impuls.thema)) name.append(el("span", { class: "marke gebiet", text: "Themengebiet ohne dich" }));
+      if (impuls.haltung) name.append(el("span", { class: "marke", text: "frühere Haltung" }));
+      if (impuls.mitgebracht_aus.length) name.append(el("span", { class: "marke", text: "mitgebracht aus " + impuls.mitgebracht_aus.join(", ") }));
+      if (impuls.gewohnheit) name.append(el("span", { class: "marke", text: "Gewohnheit " + (impuls.gewohnheit > 0 ? "+" : "−") + Math.abs(impuls.gewohnheit) }));
+      if (impuls.faerbung < 0) name.append(el("span", { class: "marke negativ", text: "negativ" }));
+      if (impuls.faerbung > 0) name.append(el("span", { class: "marke heilsam", text: "heilsam" }));
+      const sog = da ? geist.manuell.sogchance(impuls.staerke, lage.heilsamkeit) : 0;
+      if (sog > 0) name.append(el("span", { class: "marke sog", text: "reißt dich mit " + prozent(sog) + " mit, wenn du es lässt" }));
+
+      const fuellung = el("span", { class: "fuellung" });
+      fuellung.style.width = Math.round(impuls.staerke * 100) + "%";
+      const zeile = el("div", { class: "zeile" }, [
+        el("div", { class: "balken", role: "img", "aria-label": impuls.thema + ", Stärke " + zahl(impuls.staerke) + (da ? ", im Feld der ABI" : ", nur im Feld des AUI") }, [fuellung]),
+        el("span", { class: "zahl", text: zahl(impuls.staerke) }),
+      ]);
+      const eintrag = el("li", { class: klassen.join(" ") }, [name, zeile]);
+
+      if (da) {
+        const gruppe = el("div", { class: "umgang", role: "radiogroup", "aria-label": "Umgang mit " + impuls.thema });
+        const gewaehlt = wahl.get(impuls.thema) || U.WEDER_NOCH;
+        UMGANG.forEach(([art, wort, klasse], stelle) => {
+          const knopf = el("input", { type: "radio", name: "umgang-" + reihe, id: "umgang-" + reihe + "-" + stelle, value: art });
+          knopf.checked = art === gewaehlt;
+          knopf.addEventListener("change", () => wahl.set(impuls.thema, art));
+          gruppe.append(el("label", { class: klasse }, [knopf, el("span", { text: wort })]));
+        });
+        eintrag.append(gruppe);
+      }
+      liste.append(eintrag);
+    });
+    $("aufgekommen").textContent = lage.aufgekommen.length ? "Gerade von selbst aufgekommen: " + lage.aufgekommen.join(", ") : "";
+  }
+
+  function zeichne_haltung() {
+    const gebiete = $("gebiete");
+    gebiete.replaceChildren();
+    for (const g of lage.gebiete) {
+      gebiete.append(el("span", { class: "marke gebiet", text: benenne(g) + " · Einfluss " + prozent(lage.einfluss[g] || 0) }));
+    }
+    $("ohne-dich").textContent = lage.gebiete_ohne_mbi.length ? "Ohne dich entstanden: " + benenne_alle(lage.gebiete_ohne_mbi) : "";
+    $("zeiger").style.left = (lage.heilsamkeit + 1) * 50 + "%";
+    $("haltung-wort").textContent = nenne_haltung(lage.heilsamkeit);
+
+    const aui = geist.unterbewusstsein;
+    const belegt = lage.gebiete.reduce((summe, g) => summe + aui.gewicht(g, lage.gebiete), 0);
+    const anteil = Math.min(1, belegt / geist.kapazitaet);
+    $("kapazitaet").firstElementChild.style.width = Math.round(anteil * 100) + "%";
+    $("kapazitaet").classList.toggle("voll", anteil >= 1);
+    $("kapazitaet-wort").textContent = prozent(anteil) + ". Ist sie voll und hältst du mehrere Gebiete, wird das schwächste verdrängt.";
+    $("zeiger").parentElement.setAttribute("aria-label", "Haltung: " + nenne_haltung(lage.heilsamkeit));
+  }
+
+  function zeichne_themenwechsel() {
+    const auswahl = $("themenwechsel");
+    auswahl.replaceChildren(el("option", { value: "", text: "nichts tun" }));
+    for (const g of lage.gebiete) auswahl.append(el("option", { value: g, text: "Themenerhalt: bei " + benenne(g) + " bleiben" }));
+    for (const g of M.BESONDERE_GEBIETE) if (!lage.gebiete.includes(g)) auswahl.append(el("option", { value: g, text: "Themenwechsel: " + g }));
+    auswahl.append(el("option", { value: "neu", text: "Themenwechsel: anderes Themengebiet" }));
+    auswahl.value = "";
+    $("neues-gebiet-feld").hidden = true;
+  }
+
+  function zeichne_eindruecke() {
+    const ort = $("eindruecke");
+    ort.replaceChildren();
+    if (!eindruecke.length) ort.append(el("span", { class: "hinweis", text: "Noch nichts. Ohne Eingabe erlebst du im nächsten Moment nichts Neues." }));
+    eindruecke.forEach((e, stelle) => {
+      const weg = el("button", { type: "button", "aria-label": e.thema + " entfernen", text: "×" });
+      weg.addEventListener("click", () => { eindruecke.splice(stelle, 1); zeichne_eindruecke(); });
+      ort.append(el("span", { class: "eindruck" }, [el("span", { text: GEBIETSNAMEN[e.gebiet] + ": " + e.thema + " " + zahl(e.staerke) }), weg]));
+    });
+  }
+
+  function zeichne_verlauf() {
+    const ort = $("verlauf");
+    ort.replaceChildren();
+    if (!verlauf.length) ort.append(el("li", { class: "hinweis", text: "Hier steht, was in jedem abgeschlossenen Moment geschehen ist." }));
+    for (const eintrag of verlauf) {
+      const zeilen = eintrag.ereignisse.map((e) => el("span", { class: "ereignis " + (e.art || ""), text: e.text }));
+      ort.append(el("li", {}, [el("span", { class: "wann", text: "Moment " + eintrag.zeit + " · " + eintrag.haltung }), ...zeilen]));
+    }
+  }
+
+  function zeichne() {
+    $("moment").textContent = "Moment " + lage.zeit;
+    $("beispielhinweis").textContent = "Beispiel: " + szenario.name;
+    zeichne_felder();
+    zeichne_haltung();
+    zeichne_themenwechsel();
+    zeichne_eindruecke();
+    zeichne_verlauf();
+  }
+
+  // Eingaben
+  $("weiter").addEventListener("click", weiter);
+  $("themenwechsel").addEventListener("change", () => { $("neues-gebiet-feld").hidden = $("themenwechsel").value !== "neu"; });
+  $("eindruck-staerke").addEventListener("input", () => { $("eindruck-wert").textContent = zahl(Number($("eindruck-staerke").value)); });
+  $("eindruck-formular").addEventListener("submit", (ereignis) => {
+    ereignis.preventDefault();
+    const thema = $("eindruck-thema").value.trim();
+    if (!thema) { $("eindruck-thema").focus(); return; }
+    const gebiet = $("eindruck-gebiet").value;
+    eindruecke = eindruecke.filter((e) => !(e.gebiet === gebiet && e.thema === thema));
+    eindruecke.push({ gebiet, thema, staerke: Number($("eindruck-staerke").value) });
+    $("eindruck-thema").value = "";
+    zeichne_eindruecke();
+  });
+
+  const szenarioauswahl = $("szenario");
+  SZENARIEN.forEach((s, stelle) => szenarioauswahl.append(el("option", { value: String(stelle), text: s.name })));
+  function zeige_szenario() {
+    const s = SZENARIEN[Number(szenarioauswahl.value)];
+    $("szenario-text").textContent = s.text;
+    $("start-haltung").value = s.haltung;
+  }
+  szenarioauswahl.addEventListener("change", zeige_szenario);
+  $("neu").addEventListener("click", () => {
+    starte(SZENARIEN[Number(szenarioauswahl.value)], $("start-haltung").value.trim());
+    $("neu-beginnen").open = false;
+  });
+
+  zeige_szenario();
+  starte(SZENARIEN[0]);
+})();
+</script>

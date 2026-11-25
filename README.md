@@ -23,6 +23,18 @@ welche Lücken das Programm vorläufig mit eigenen Annahmen füllt.
 
 Braucht nur Python 3.10 oder neuer, für die Tests zusätzlich pytest.
 
+## Im Browser
+
+`web/index.html` ist dieselbe Simulation zum Anklicken, gedacht für Übende: Man
+sieht die beiden Felder, die eigene Haltung und den Verlauf und wählt in jedem
+Moment, wie man mit dem umgeht, was auftaucht. `web/geist.js` ist das Modell
+dafür, eine Übertragung von `geist/modell.py`. `tests/test_web.py` spielt
+zufällige Abläufe in beiden Fassungen durch und vergleicht jeden Moment; der
+Test braucht Node und wird ohne übersprungen.
+
+Die Seite ist als Inhalt ohne `<html>`-Gerüst geschrieben, so wie sie als
+Artifact veröffentlicht wird.
+
 ## 1. Fundamentale Layer des Geistes
 
 | Kürzel | Layer | Steuerung | Bewusstheit |
