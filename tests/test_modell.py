@@ -136,7 +136,7 @@ def test_engage_verstaerkt_das_thema_im_aui():
     assert staerke(mit.schritt(), "Thema") == 0.9
 
 
-def test_engage_macht_das_thema_zum_alleinigen_gebiet_wenn_die_mbi_nur_eines_haelt():
+def test_engage_auf_ein_thema_aus_einem_anderen_gebiet_ersetzt_die_haltung():
     geist = geist_mit(
         nach_plan({0: Entscheidung({"Sorge": Umgang.ENGAGE})}),
         "Arbeit",
@@ -148,12 +148,34 @@ def test_engage_macht_das_thema_zum_alleinigen_gebiet_wenn_die_mbi_nur_eines_hae
     assert zweiter.gebiete == ("Sorge",)
 
 
-def test_engage_stellt_das_thema_parallel_wenn_die_mbi_mehrere_haelt():
+def test_engage_auf_ein_thema_aus_der_jetzigen_haltung_laeuft_parallel():
+    geist = geist_mit(immer(Umgang.ENGAGE, "Sorge"), "Familie", SORGE_AUS_DER_FAMILIE)
+    geist.schritt()
+    assert geist.schritt().gebiete == ("Familie", "Sorge")
+
+
+def test_woher_ein_thema_stammt_entscheidet_die_groessere_haelfte_seiner_staerke():
+    def haltung_nach_engage(aus_der_arbeit, aus_der_familie):
+        geist = geist_mit(
+            immer(Umgang.ENGAGE, "Sorge"),
+            "Arbeit",
+            [erfahrung("Sorge", aus_der_arbeit, "Arbeit"), erfahrung("Sorge", aus_der_familie, "Familie")],
+        )
+        return geist.schritt().gebiete_danach
+
+    # Aus der Familie kommt nur die Hälfte mit: 0.5 gegen 0.4 und 0.3 gegen 0.4.
+    assert haltung_nach_engage(0.5, 0.8) == ("Arbeit", "Sorge")
+    assert haltung_nach_engage(0.3, 0.8) == ("Sorge",)
+
+
+def test_nach_dem_ersetzen_liegt_die_vorherige_haltung_im_aui():
     geist = geist_mit(
-        immer(Umgang.ENGAGE, "Sorge"), "Arbeit", SORGE_AUS_DER_FAMILIE, mehrere=True
+        nach_plan({0: Entscheidung({"Sorge": Umgang.ENGAGE})}),
+        "Arbeit",
+        SORGE_AUS_DER_FAMILIE,
     )
     geist.schritt()
-    assert geist.schritt().gebiete == ("Arbeit", "Sorge")
+    assert "Arbeit" in haltungen_im_feld(geist.schritt())
 
 
 def test_im_eigenen_themengebiet_zaehlt_das_thema_voll():
@@ -205,9 +227,9 @@ def test_disengage_macht_das_thema_nicht_zum_gebiet():
 
 
 def test_disengage_beendet_ein_themengebiet_der_mbi():
-    geist = geist_mit(nach_plan(ERST_ENGAGE_DANN_DISENGAGE), "Arbeit", SORGE_AUS_DER_FAMILIE, mehrere=True)
+    geist = geist_mit(nach_plan(ERST_ENGAGE_DANN_DISENGAGE), "Familie", SORGE_AUS_DER_FAMILIE)
     verlauf = [geist.schritt().gebiete_danach for _ in range(2)]
-    assert verlauf == [("Arbeit", "Sorge"), ("Arbeit",)]
+    assert verlauf == [("Familie", "Sorge"), ("Familie",)]
 
 
 def test_ohne_eigenes_gebiet_bleibt_der_mbi_die_jetzige_erfahrung():
@@ -325,9 +347,11 @@ def test_themenerhalt_laesst_die_gebiete_wie_sie_sind():
     assert len(geist.unterbewusstsein.erfahrungen) == 1
 
 
-def test_themenwechsel_ersetzt_die_gebiete_auch_wenn_die_mbi_mehrere_haelt():
-    geist = geist_mit(nach_plan({0: Entscheidung(themenwechsel=SINNE)}), "Arbeit", mehrere=True)
-    assert geist.schritt().gebiete_danach == (SINNE,)
+def test_themenwechsel_ersetzt_alle_gebiete_der_haltung():
+    plan = {0: Entscheidung({"Sorge": Umgang.ENGAGE}), 1: Entscheidung(themenwechsel=SINNE)}
+    geist = geist_mit(nach_plan(plan), "Familie", SORGE_AUS_DER_FAMILIE)
+    verlauf = [geist.schritt().gebiete_danach for _ in range(2)]
+    assert verlauf == [("Familie", "Sorge"), (SINNE,)]
 
 
 # --- Gebiete: AUI und ABI orientieren sich daran ---
@@ -503,7 +527,8 @@ def test_in_der_erinnerung_ist_engage_moeglich():
     moment = geist.schritt()
 
     assert moment.umgang == {"Streit": Umgang.ENGAGE}
-    assert moment.gebiete_danach == ("Streit",)
+    # Der Streit stammt aus der Erinnerung, also läuft er parallel zu ihr.
+    assert moment.gebiete_danach == (ERINNERUNG, "Streit")
 
 
 # --- Die Haltung: das Gebiet der MBI. Das AUI kann frühere Haltungen enthalten ---

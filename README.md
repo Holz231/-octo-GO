@@ -15,9 +15,6 @@ welche Lücken das Programm vorläufig mit eigenen Annahmen füllt.
     python -m geist                    # interaktiv: du bist die MBI
     python -m pytest                   # Tests
 
-Mit `--mehrere` hält die MBI mehrere Gebiete zugleich statt nur eines. Das geht
-bei den Demos und im interaktiven Modus.
-
 Braucht nur Python 3.10 oder neuer, für die Tests zusätzlich pytest.
 
 ## 1. Fundamentale Layer des Geistes
@@ -54,8 +51,10 @@ Festgelegt:
 7. Die MBI geht mit einem Thema auf eine von drei Arten um. Das gibt es nur
    bei AUI und ABI, also mit dem, was aus dem AUI im Feld der ABI auftaucht:
    - **engage** verstärkt das Thema im AUI. Zugleich macht die MBI es zu einem
-     neuen Themengebiet, in dem sie agiert: parallel zum bisherigen oder
-     allein, je nachdem, ob die MBI mehrere Themen zugleich hat oder nur eines.
+     neuen Themengebiet, in dem sie agiert. Stammt das neue Thema aus der
+     jetzigen Haltung, läuft es parallel. Kommt es aus einem anderen Gebiet,
+     ersetzt es sie. Der Wechsel ist dabei nicht total, weil das Vorherige
+     dann im AUI auftaucht.
    - **disengage** schwächt das Thema im AUI und verhindert, dass die MBI es zu
      einem neuen Themengebiet in der ABI macht.
    - **weder noch** („non disengage and non engage“) verstärkt nicht und
@@ -88,15 +87,17 @@ stammt von mir, im Modell hat diese Dreiheit noch keinen eigenen Namen:
 - **Wie stark engage und disengage wirken:** um einen festen Betrag (0,4), als
   neue Erfahrung im AUI. Disengage schwächt höchstens so weit, wie das Thema
   gerade auftaucht.
-- **Mehrere oder eines:** Ob die MBI mehrere Gebiete zugleich hält, ist eine
-  Einstellung von außen (`--mehrere`), keine Entscheidung im einzelnen Moment.
+- **Woher ein Thema stammt:** aus der jetzigen Haltung, wenn mindestens die
+  Hälfte seiner Stärke von dort kommt, sonst aus einem anderen Gebiet. Eine
+  frühere Haltung, die auftaucht, kommt immer aus einem anderen Gebiet.
+- **Was zur jetzigen Haltung zählt:** nur die Gebiete der MBI, nicht die
+  Themengebiete, die ohne sie entstanden sind.
 - **Disengage beendet ein Gebiet:** Ist das Thema schon ein Themengebiet der
   MBI, hört es durch disengage auf, eines zu sein.
 - **Ohne eigenes Gebiet:** Gibt die MBI ihr letztes Gebiet auf, bleibt ihr die
   jetzige Erfahrung.
 - **Themenwechsel ersetzt:** Wechselt die MBI autonom das Thema, gibt sie alle
-  bisherigen Gebiete auf, auch wenn sie mehrere zugleich hält. Parallel kommt
-  ein Gebiet nur durch engage dazu.
+  bisherigen Gebiete auf. Parallel kommt ein Gebiet nur durch engage dazu.
 - **Themenwechsel in die Sinne oder die jetzige Erfahrung:** Auch dorthin
   kommt die MBI durch einen Themenwechsel.
 - **Themenerhalt:** Tut die MBI nichts, bleibt sie in ihren Gebieten.

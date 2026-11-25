@@ -5,8 +5,6 @@
     python -m geist --demo haltung   wie eine frühere Haltung aus dem AUI auftaucht
     python -m geist --demo gebiete   wie das AUI Themen in neue Gebiete mitführt
     python -m geist --demo erinnerung  wie die MBI in die Erinnerung wechselt
-
-Mit --mehrere hält die MBI mehrere Gebiete zugleich statt nur eines.
 """
 
 from __future__ import annotations
@@ -98,7 +96,7 @@ def zeige(moment: Moment, schwelle: float) -> None:
             print(f"  → Themengebiet ohne MBI löst sich auf: {gebiet}")
 
 
-def demo_umgang(mehrere: bool) -> None:
+def demo_umgang() -> None:
     """Engage, disengage und weder noch nebeneinander.
 
     Sorge, Hunger und Ohrwurm stammen alle aus dem Themengebiet Zuhause und
@@ -121,14 +119,14 @@ def demo_umgang(mehrere: bool) -> None:
         return Entscheidung(umgang)
 
     # Fester Zufall, damit der Ablauf jedes Mal gleich ist.
-    geist = Geist(entscheider, "Arbeit", mehrere=mehrere, zufall=random.Random(7))
+    geist = Geist(entscheider, "Arbeit", zufall=random.Random(7))
     for thema in ("Sorge", "Hunger", "Ohrwurm"):
         geist.unterbewusstsein.erlebe(Erfahrung(thema, 1.0, 0, ("Zuhause",)))
     for _ in range(7):
         zeige(geist.schritt(), geist.automatisch.schwelle)
 
 
-def demo_gebiete(mehrere: bool) -> None:
+def demo_gebiete() -> None:
     """Die MBI wandert durch alle drei Arten von Gebieten.
 
     Die Sorge stammt aus dem Themengebiet Familie, der Atem ist ein
@@ -146,7 +144,6 @@ def demo_gebiete(mehrere: bool) -> None:
     geist = Geist(
         lambda lage: ablauf.get(geist.zeit, Entscheidung()),
         "Familie",
-        mehrere=mehrere,
         chance=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 1.0, 0, ("Familie",)))
@@ -154,25 +151,26 @@ def demo_gebiete(mehrere: bool) -> None:
         zeige(geist.schritt({"Atem": 0.3}), geist.automatisch.schwelle)
 
 
-def demo_erinnerung(mehrere: bool) -> None:
+def demo_erinnerung() -> None:
     """Die MBI holt etwas Verblasstes zurück, indem sie in die Erinnerung wechselt.
 
     Der Streit liegt lange zurück und ist im AUI fast verklungen. Er taucht
     nicht im Feld der ABI auf, also kann die MBI nicht zu ihm engagen. Sie kann
     aber ihr Thema in die Erinnerung wechseln. Dort zählt Früheres unverblasst,
-    der Streit taucht in der ABI auf, und erst jetzt ist engage möglich: Der
-    Streit wird ein eigenes Themengebiet der MBI. Themengebiete ohne die MBI
-    sind hier abgeschaltet.
+    der Streit taucht in der ABI auf, und erst jetzt ist engage möglich. Weil
+    der Streit aus der Erinnerung stammt, in der die MBI gerade ist, läuft er
+    als Themengebiet parallel zu ihr. Wechselt die MBI danach ganz zum Streit,
+    bleibt von ihm, was das Engage im AUI verstärkt hat. Themengebiete ohne die
+    MBI sind hier abgeschaltet.
     """
     ablauf = {
         0: Entscheidung(themenwechsel=ERINNERUNG),
         1: Entscheidung({"Streit": Umgang.ENGAGE}),
-        2: Entscheidung({"Streit": Umgang.ENGAGE}),
+        2: Entscheidung(themenwechsel="Streit"),
     }
     geist = Geist(
         lambda lage: ablauf.get(geist.zeit, Entscheidung()),
         "Familie",
-        mehrere=mehrere,
         chance=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Streit", 0.9, -10, ("Familie",)))
@@ -180,25 +178,29 @@ def demo_erinnerung(mehrere: bool) -> None:
         zeige(geist.schritt(), geist.automatisch.schwelle)
 
 
-def demo_haltung(mehrere: bool) -> None:
+def demo_haltung() -> None:
     """Eine frühere Haltung taucht aus dem AUI auf, und die MBI engaged darauf.
 
     Die Sorge wurde in der Haltung Familie erlebt, das AUI enthält diese
     Haltung also. Die MBI ist in der Arbeit. Mit der Sorge taucht auch die
-    Familie als frühere Haltung im Feld der ABI auf. Die MBI engaged darauf,
-    die Familie wird ihre Haltung, und die Sorge zählt wieder voll. Jetzt ist
-    es die Arbeit, die als frühere Haltung im AUI liegt. Themengebiete ohne
-    die MBI sind hier abgeschaltet.
+    Familie als frühere Haltung im Feld der ABI auf. Die MBI engaged darauf.
+    Die Familie kommt aus einem anderen Gebiet, also ersetzt sie die Arbeit als
+    Haltung, und die Sorge zählt wieder voll. Der Wechsel ist nicht total: Die
+    Arbeit liegt jetzt als frühere Haltung im AUI. Dann engaged die MBI zur
+    Sorge. Die stammt aus der jetzigen Haltung, also läuft sie parallel zur
+    Familie. Themengebiete ohne die MBI sind hier abgeschaltet.
     """
-    ablauf = {1: Entscheidung({"Familie": Umgang.ENGAGE})}
+    ablauf = {
+        1: Entscheidung({"Familie": Umgang.ENGAGE}),
+        2: Entscheidung({"Sorge": Umgang.ENGAGE}),
+    }
     geist = Geist(
         lambda lage: ablauf.get(geist.zeit, Entscheidung()),
         "Arbeit",
-        mehrere=mehrere,
         chance=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 1.0, 0, ("Familie",)))
-    for _ in range(4):
+    for _ in range(5):
         zeige(geist.schritt(), geist.automatisch.schwelle)
 
 
@@ -266,19 +268,17 @@ def lies_sinne(text: str) -> dict[str, float]:
     return sinne
 
 
-def interaktiv(mehrere: bool) -> None:
+def interaktiv() -> None:
     print("Du bist die manuelle bewusste Intention (MBI).")
-    if mehrere:
-        print("Deine Haltung ist das Gebiet, in dem du agierst. Du hältst mehrere zugleich.")
-    else:
-        print("Deine Haltung ist das Gebiet, in dem du agierst. Du hältst immer nur eines.")
-        print("(Mehrere zugleich: mit --mehrere starten.)")
+    print("Deine Haltung ist das Gebiet, in dem du agierst.")
     print()
     print("Jeder Moment hat zwei Eingaben:")
     print("1. Sinne: 'Thema' oder 'Thema=Stärke' (0 bis 1), mehrere mit Komma.")
     print("   Leer = keine Eindrücke, 'q' beendet.")
     print("2. Was du tust, mehrere mit Komma:")
     print("   'e Thema'  engage: verstärkt das Thema und macht es zu deiner Haltung.")
+    print("              Stammt es aus deiner jetzigen Haltung, läuft es parallel")
+    print("              dazu. Kommt es aus einem anderen Gebiet, ersetzt es sie.")
     print("              Das geht auch mit einer früheren Haltung, die auftaucht.")
     print("   'd Thema'  disengage: schwächt das Thema, es gehört nicht mehr zu deiner Haltung.")
     print("              Beides geht nur zu Themen, die im ABI-Feld auftauchen.")
@@ -291,7 +291,7 @@ def interaktiv(mehrere: bool) -> None:
         gebiet = ""
         while not gebiet:
             gebiet = lies_gebiet(input("\nIn welcher Haltung bist du? "))
-        geist = Geist(frage_entscheidung, gebiet, mehrere=mehrere)
+        geist = Geist(frage_entscheidung, gebiet)
         while True:
             eingabe = input("\nWas nehmen deine Sinne wahr? ")
             if eingabe.strip().lower() == "q":
@@ -315,16 +315,11 @@ def main() -> None:
         choices=sorted(DEMOS),
         help="festen Ablauf zeigen (Standard: umgang)",
     )
-    parser.add_argument(
-        "--mehrere",
-        action="store_true",
-        help="die MBI hält mehrere Gebiete zugleich statt nur eines",
-    )
     args = parser.parse_args()
     if args.demo:
-        DEMOS[args.demo](args.mehrere)
+        DEMOS[args.demo]()
     else:
-        interaktiv(args.mehrere)
+        interaktiv()
 
 
 if __name__ == "__main__":
