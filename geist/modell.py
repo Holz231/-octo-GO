@@ -207,6 +207,20 @@ STANDARD_WIRKUNG: Mapping[Umgang, float] = {
 }
 
 
+def zustandsfaktor(heilsamkeit: float, faerbung: float, hebel: float, ruhe: float) -> float:
+    """Wie der Gesamtzustand eine Wahrscheinlichkeit für ein Thema verschiebt.
+
+    Je unheilsamer, desto wahrscheinlicher Negatives und desto
+    unwahrscheinlicher Heilsames. Je heilsamer, desto umgekehrt, und desto
+    weniger insgesamt. Auf null fällt der Faktor nie: Auch im Extrem bleibt für
+    das Gegensätzliche eine Chance.
+    """
+    faktor = hebel ** (heilsamkeit * faerbung)
+    if heilsamkeit > 0:
+        faktor *= 1 - ruhe * heilsamkeit
+    return faktor
+
+
 def gehoert_zum_gebiet(
     erfahrung: Erfahrung, gebiet: str, im_abi_feld: Collection[str]
 ) -> bool:
@@ -320,14 +334,8 @@ class Unterbewusstsein:
 
     def aufkommenschance(self, thema: str, heilsamkeit: float) -> float:
         """Mit welcher Wahrscheinlichkeit ein Thema in diesem Moment von selbst aufkommt."""
-        # Je unheilsamer der Gesamtzustand, desto öfter Negatives und desto
-        # seltener Heilsames. Je heilsamer, desto öfter Heilsames, desto
-        # seltener Negatives und desto weniger insgesamt. Auch im Extrem bleibt
-        # für das Gegensätzliche eine Chance.
-        chance = self.spontan * self.zufallshebel ** (heilsamkeit * self.faerbung(thema))
-        if heilsamkeit > 0:
-            chance *= 1 - self.ruhe * heilsamkeit
-        return min(1.0, chance)
+        faktor = zustandsfaktor(heilsamkeit, self.faerbung(thema), self.zufallshebel, self.ruhe)
+        return min(1.0, self.spontan * faktor)
 
     def lasse_aufkommen(self, zeit: int, heilsamkeit: float) -> list[str]:
         """Lässt der Zufall entscheiden, welche Themen von selbst wieder aufkommen."""
@@ -531,12 +539,19 @@ class AutomatischeBewussteIntention:
         schwelle: float = 0.3,
         chance: float = 0.25,
         zufall: random.Random | None = None,
+        zufallshebel: float = 4.0,
+        ruhe: float = 0.5,
     ):
         # ANNAHME: Über die Grenze reicht, was mindestens so stark ist wie die Schwelle.
         self.schwelle = schwelle
         # ANNAHME: Mit dieser Wahrscheinlichkeit pro Moment wird ein Thema im
-        # Feld, zu dem die MBI "weder noch" hält, von selbst zum Themengebiet.
+        # Feld, zu dem die MBI "weder noch" hält, von selbst zum Themengebiet,
+        # wenn die Haltung in der Mitte liegt.
         self.chance = chance
+        # Wie stark der Gesamtzustand diese Wahrscheinlichkeit verschiebt,
+        # genauso wie beim Aufkommen im AUI.
+        self.zufallshebel = zufallshebel
+        self.ruhe = ruhe
         self.zufall = zufall or random.Random()
         self.feld: list[Impuls] = []
         self.gebiete_ohne_mbi: list[str] = []
@@ -545,13 +560,22 @@ class AutomatischeBewussteIntention:
         self.feld = [i for i in aui_feld if i.staerke >= self.schwelle]
         return self.feld
 
+    def gebietschance(self, faerbung: float, heilsamkeit: float) -> float:
+        """Mit welcher Wahrscheinlichkeit ein Thema ohne die MBI zum Themengebiet wird."""
+        faktor = zustandsfaktor(heilsamkeit, faerbung, self.zufallshebel, self.ruhe)
+        return min(1.0, self.chance * faktor)
+
     def lasse_gebiete_entstehen(
-        self, umgang: Mapping[str, Umgang], gebiete_der_mbi: Collection[str]
+        self,
+        umgang: Mapping[str, Umgang],
+        gebiete_der_mbi: Collection[str],
+        heilsamkeit: float = 0.0,
     ) -> None:
         """Themengebiete ohne die MBI: Manche lösen sich auf, neue können entstehen."""
         # Eine Haltung erschafft nur die MBI: Eine frühere Haltung, die auftaucht,
         # wird deshalb nicht von selbst zum Gebiet.
-        im_feld = [impuls.thema for impuls in self.feld if not impuls.haltung]
+        faerbungen = {impuls.thema: impuls.faerbung for impuls in self.feld if not impuls.haltung}
+        im_feld = list(faerbungen)
 
         def sich_selbst_ueberlassen(thema: str) -> bool:
             weder_noch = umgang.get(thema, Umgang.WEDER_NOCH) is Umgang.WEDER_NOCH
@@ -567,7 +591,7 @@ class AutomatischeBewussteIntention:
             if (
                 sich_selbst_ueberlassen(thema)
                 and thema not in self.gebiete_ohne_mbi
-                and self.zufall.random() < self.chance
+                and self.zufall.random() < self.gebietschance(faerbungen[thema], heilsamkeit)
             ):
                 self.gebiete_ohne_mbi.append(thema)
 
@@ -777,7 +801,7 @@ class Geist:
             spontan=spontan,
             zufall=zufall,
         )
-        self.automatisch = AutomatischeBewussteIntention(schwelle, chance, zufall)
+        self.automatisch = AutomatischeBewussteIntention(schwelle, chance, zufall, ruhe=ruhe)
         # ANNAHME: Sicher mitgerissen wird die MBI in der Mitte von einem Thema,
         # das allein ihre Kapazität füllt. Mit `sog=False` geschieht es nie.
         self.manuell = ManuelleBewussteIntention(
@@ -852,7 +876,7 @@ class Geist:
             self.unterbewusstsein.gewicht, self.kapazitaet, gerade_betreten
         )
 
-        self.automatisch.lasse_gebiete_entstehen(umgang, self.manuell.gebiete)
+        self.automatisch.lasse_gebiete_entstehen(umgang, self.manuell.gebiete, heilsamkeit)
 
         moment = Moment(
             self.zeit,

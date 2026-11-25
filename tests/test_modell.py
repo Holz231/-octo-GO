@@ -1,4 +1,5 @@
 from geist import (
+    AutomatischeBewussteIntention,
     EMOTION,
     KOERPER,
     ERINNERUNG,
@@ -1298,3 +1299,29 @@ def test_der_moment_zeigt_was_von_selbst_aufgekommen_ist():
 
     assert moment.aufgekommen == ("Sorge",)
     assert staerke(moment, "Sorge") == 0.8
+
+
+# --- Auch ob ein Thema ohne die MBI zum Themengebiet wird, hängt am Gesamtzustand ---
+
+
+def test_die_chance_auf_ein_themengebiet_ohne_mbi_haengt_am_gesamtzustand():
+    chance = AutomatischeBewussteIntention(chance=0.2, zufallshebel=4.0, ruhe=0.5).gebietschance
+    negativ, neutral, heilsam = -1.0, 0.0, 1.0
+
+    assert [chance(faerbung, 0.0) for faerbung in (negativ, neutral, heilsam)] == [0.2, 0.2, 0.2]
+    # Ganz unheilsam: Negatives viermal so wahrscheinlich, Heilsames ein Viertel.
+    assert [chance(faerbung, -1.0) for faerbung in (negativ, neutral, heilsam)] == [0.8, 0.2, 0.05]
+    # Ganz heilsam: insgesamt seltener, Heilsames am ehesten, Negatives kaum.
+    assert [chance(faerbung, 1.0) for faerbung in (negativ, neutral, heilsam)] == [0.025, 0.1, 0.4]
+
+
+def test_im_unheilsamen_wird_negatives_eher_ohne_die_mbi_zum_themengebiet():
+    def wird_zum_gebiet(heilsamkeit):
+        geist = geist_mit(erfahrungen=[erfahrung("Sorge", 0.8, "Familie")], chance=0.2, zufall=FesterZufall(0.5))
+        geist.unterbewusstsein.umgangsbilanz["Sorge"] = -8
+        geist.unterbewusstsein.faerbekraft = 0.0
+        geist.manuell.heilsamkeit = heilsamkeit
+        return geist.schritt().gebiete_ohne_mbi_danach == ("Sorge",)
+
+    assert not wird_zum_gebiet(0.0)
+    assert wird_zum_gebiet(-1.0)

@@ -299,8 +299,13 @@ Zur Haltung:
 
 Zu den Themengebieten ohne MBI:
 
-- **Wie groß die Chance ist:** 25 Prozent pro Moment, für jedes Thema im Feld
-  der ABI, zu dem die MBI weder noch hält.
+- **Wie groß die Chance ist:** in der Mitte zwischen heilsam und unheilsam
+  25 Prozent pro Moment, für jedes Thema im Feld der ABI, zu dem die MBI weder
+  noch hält.
+- **Sie hängt am Gesamtzustand,** genauso wie das Aufkommen im AUI: Im ganz
+  Unheilsamen wird ein negatives Thema viermal so wahrscheinlich von selbst zum
+  Themengebiet und ein heilsames ein Viertel so wahrscheinlich. Im ganz
+  Heilsamen ist es umgekehrt, und insgesamt halb so wahrscheinlich.
 - **Was „geht aus dem AUI in die ABI“ heißt:** Das Thema taucht im Feld der ABI
   auf, weil es stark genug ist. Erst dann hat es die Chance.
 - **Was ein solches Gebiet bewirkt:** AUI und ABI orientieren sich daran wie an
