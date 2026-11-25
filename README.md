@@ -15,6 +15,7 @@ welche Lücken das Programm vorläufig mit eigenen Annahmen füllt.
     python -m geist --demo gewohnheit  # wie wiederholtes engage ein Thema prägt
     python -m geist --demo emotion     # wie Emotion und Erfahrung zusammen auftauchen
     python -m geist --demo einfluss    # wie ein Gebiet durch Erfahrung an Einfluss gewinnt
+    python -m geist --demo heilsam     # wie Abneigung die Haltung unheilsam macht
     python -m geist                    # interaktiv: du bist die MBI
     python -m pytest                   # Tests
 
@@ -97,9 +98,21 @@ Festgelegt:
 14. Jedes Themengebiet beeinflusst die Impulse des AUI, im vollen Spektrum von
     stark bis gar nicht. Wie stark, ist durch Erfahrung gelernt.
 
-Festgehalten, aber noch nicht eingebaut: Ein Themengebiet kann dazu führen,
-dass das AUI insgesamt mehr oder weniger Impulse erzeugt, etwa Müdigkeit oder
-Anspannung. Offen ist, was entscheidet, ob es mehr oder weniger werden.
+15. Es gibt ein Spektrum von heilsam zu unheilsam. Themengebiete sind weder
+    heilsam noch unheilsam: Es ist die Haltung, die die MBI einnimmt. Welche
+    sie einnimmt, kann durch das beeinflusst werden, was aus dem AUI in die
+    ABI steigt.
+16. Unheilsam wird die Haltung, wenn die MBI aus Verlangen oder Abneigung
+    agiert, also negativ engaged oder disengaged. Das ist auch gemeint, wenn
+    sie auf Dinge aus dem AUI in der ABI reagiert.
+17. Heilsam wird die Haltung durch engage ohne Verlangen und durch autonomes
+    Ausrichten.
+18. Je unheilsamer die Haltung, desto mehr negative Impulse: Ihre Frequenz im
+    AUI ist erhöht, und die Chance auf heilsame ist geringer. Je heilsamer,
+    desto weniger Impulse des AUI und desto höher die Chance auf heilsame.
+19. Negativ oder heilsam wird ein einzelner Impuls durch den Umgang der MBI
+    mit seinem Thema: negativ durch Verlangen oder Abneigung, heilsam ohne
+    beides. Es ist also gelernt.
 
 ## 3. Vorläufige Annahmen im Programm
 
@@ -127,6 +140,30 @@ stammt von mir, im Modell hat diese Dreiheit noch keinen eigenen Namen:
   kommt die MBI durch einen Themenwechsel.
 - **Themenerhalt:** Tut die MBI nichts, bleibt sie in ihren Gebieten.
 
+Zum Spektrum von heilsam zu unheilsam:
+
+- **Wie die Haltung sich verschiebt:** um ein Fünftel des Wegs je Handlung.
+  Nach fünf Handlungen aus Verlangen oder Abneigung ist sie ganz unheilsam.
+- **Disengage ohne Abneigung** ist heilsam wie engage ohne Verlangen.
+- **Themenerhalt** zählt nur dann als autonomes Ausrichten, wenn sich die MBI
+  ausdrücklich auf das Gebiet richtet, in dem sie schon ist. Bloßes Nichtstun
+  und weder noch verschieben die Haltung nicht.
+- **Die Haltung klingt nicht von selbst ab.** Sie bleibt, wo sie ist, bis die
+  MBI wieder handelt, und sie geht mit der MBI in jedes neue Gebiet.
+- **Verlangen und Abneigung wirken auf das Thema wie engage und disengage:**
+  Sie verstärken oder schwächen es im AUI gleich stark, zählen gleich für die
+  Gewohnheit und machen es genauso zum Themengebiet.
+- **Häufigkeit und Chance sind als Stärke umgesetzt.** Bei ganz unheilsamer
+  Haltung sind negative Impulse um die Hälfte stärker und heilsame um die
+  Hälfte schwächer. Bei ganz heilsamer Haltung sind alle Impulse halb so
+  stark, heilsame davon am wenigsten geschwächt.
+- **Wie negativ oder heilsam ein Thema ist,** wächst mit jedem Umgang in
+  dieselbe Richtung, nach einem Mal auf die Hälfte, nach zweien auf drei
+  Viertel. Umgang in die andere Richtung hebt es wieder auf.
+- **Der Einfluss des AUI auf die Haltung** läuft im Programm nur darüber, was
+  es auftauchen lässt und worauf die MBI dann reagiert. Von selbst verschiebt
+  nichts die Haltung.
+
 Zum Einfluss der Gebiete auf die Impulse des AUI. Eingebaut sind zwei Wege:
 Ein Gebiet drängt zurück, was nicht zu ihm gehört, und ein Thema zieht
 bestimmte andere Themen mit (siehe „Zum gemeinsamen Auftauchen“).
@@ -142,7 +179,8 @@ bestimmte andere Themen mit (siehe „Zum gemeinsamen Auftauchen“).
   Viertel. Das ersetzt die frühere feste halbe Stärke.
 - **Bei mehreren Gebieten** bestimmt das einflussreichste.
 - **In den Demo-Läufen** außer `einfluss` ist der Einfluss auf 50 % festgelegt,
-  damit jeder Lauf nur seinen eigenen Punkt zeigt.
+  und außer in `heilsam` bleibt die Haltung in der Mitte zwischen heilsam und
+  unheilsam, damit jeder Lauf nur seinen eigenen Punkt zeigt.
 
 Zur Gewohnheit:
 

@@ -30,15 +30,30 @@ def nach_plan(plan):
 
 
 def geist_mit(
-    entscheider=nichts, gebiet=GEBIET, erfahrungen=(), chance=0.0, mitnahme=0.5, **kwargs
+    entscheider=nichts,
+    gebiet=GEBIET,
+    erfahrungen=(),
+    chance=0.0,
+    mitnahme=0.5,
+    haltungsschritt=0.0,
+    **kwargs,
 ):
-    """Ein Geist ohne Zufall und mit festem Einfluss der Gebiete.
+    """Ein Geist, bei dem jeder Test nur das sieht, was er prüft.
 
-    Fremdes kommt hier immer mit halber Stärke mit, solange `mitnahme` nicht
-    anders gesetzt wird. `mitnahme=None` lässt den Einfluss durch Erfahrung
-    entstehen, wie im Modell.
+    Ohne Zufall, solange `chance` nicht gesetzt wird. Fremdes kommt immer mit
+    halber Stärke mit; `mitnahme=None` lässt den Einfluss der Gebiete durch
+    Erfahrung entstehen, wie im Modell. Die Haltung bleibt in der Mitte
+    zwischen heilsam und unheilsam; erst ein `haltungsschritt` lässt sie sich
+    verschieben.
     """
-    geist = Geist(entscheider, gebiet, chance=chance, mitnahme=mitnahme, **kwargs)
+    geist = Geist(
+        entscheider,
+        gebiet,
+        chance=chance,
+        mitnahme=mitnahme,
+        haltungsschritt=haltungsschritt,
+        **kwargs,
+    )
     for e in erfahrungen:
         geist.unterbewusstsein.erlebe(e)
     return geist
@@ -939,3 +954,129 @@ def test_bei_mehreren_gebieten_bestimmt_das_einflussreichste():
 def test_der_moment_zeigt_den_einfluss_der_gebiete():
     geist = geist_mit(gebiet="Hobby", erfahrungen=[erfahrung("Malen", 0.5, "Hobby")] * 2, mitnahme=None)
     assert geist.schritt().einfluss == {"Hobby": 0.5}
+
+
+# --- Die Haltung liegt auf einem Spektrum von heilsam zu unheilsam ---
+
+
+def haltung_nach(*entscheidungen, erfahrungen=(erfahrung("Thema", 0.8),)):
+    """Wo die Haltung nach diesen Entscheidungen liegt, eine pro Moment."""
+    geist = geist_mit(
+        nach_plan(dict(enumerate(entscheidungen))), erfahrungen=erfahrungen, haltungsschritt=0.2
+    )
+    for _ in entscheidungen:
+        moment = geist.schritt()
+    return moment.heilsamkeit_danach
+
+
+def test_die_haltung_beginnt_in_der_mitte():
+    assert geist_mit(haltungsschritt=0.2).schritt().heilsamkeit == 0.0
+
+
+def test_engage_aus_verlangen_und_disengage_aus_abneigung_machen_die_haltung_unheilsam():
+    assert haltung_nach(Entscheidung({"Thema": Umgang.VERLANGEN})) == -0.2
+    assert haltung_nach(Entscheidung({"Thema": Umgang.ABNEIGUNG})) == -0.2
+
+
+def test_engage_und_disengage_ohne_verlangen_und_abneigung_machen_sie_heilsam():
+    assert haltung_nach(Entscheidung({"Thema": Umgang.ENGAGE})) == 0.2
+    assert haltung_nach(Entscheidung({"Thema": Umgang.DISENGAGE})) == 0.2
+
+
+def test_autonomes_ausrichten_macht_die_haltung_heilsam():
+    themenwechsel = Entscheidung(themenwechsel="Neuland")
+    themenerhalt = Entscheidung(themenwechsel=GEBIET)
+
+    assert haltung_nach(themenwechsel) == 0.2
+    assert haltung_nach(themenerhalt) == 0.2
+
+
+def test_weder_noch_und_nichtstun_verschieben_die_haltung_nicht():
+    assert haltung_nach(Entscheidung({"Thema": Umgang.WEDER_NOCH})) == 0.0
+    assert haltung_nach(Entscheidung(), Entscheidung(), Entscheidung()) == 0.0
+
+
+def test_die_haltung_bleibt_zwischen_ganz_unheilsam_und_ganz_heilsam():
+    verlangen = [Entscheidung({"Thema": Umgang.VERLANGEN})] * 8
+    assert haltung_nach(*verlangen) == -1.0
+
+
+def test_verlangen_und_abneigung_wirken_im_aui_wie_engage_und_disengage():
+    for unheilsam, heilsam in ((Umgang.VERLANGEN, Umgang.ENGAGE), (Umgang.ABNEIGUNG, Umgang.DISENGAGE)):
+        verlauf = []
+        for umgang in (unheilsam, heilsam):
+            geist = geist_mit(immer(umgang), erfahrungen=[erfahrung("Thema", 0.8)])
+            moment = geist.schritt()
+            verlauf.append((geist.unterbewusstsein.erfahrungen[-1].staerke, moment.gebiete_danach))
+        assert verlauf[0] == verlauf[1]
+
+
+def test_themengebiete_sind_weder_heilsam_noch_unheilsam_es_ist_die_haltung():
+    plan = {0: Entscheidung({"Thema": Umgang.VERLANGEN}), 1: Entscheidung(themenwechsel="Neuland")}
+    geist = geist_mit(nach_plan(plan), erfahrungen=[erfahrung("Thema", 0.8)], haltungsschritt=0.2)
+    geist.schritt()
+
+    # Die Haltung geht mit der MBI in das neue Gebiet, sie hängt nicht am alten.
+    assert geist.schritt().heilsamkeit == -0.2
+
+
+def test_durch_den_umgang_wird_ein_thema_negativ_oder_heilsam():
+    def faerbung_nach(*umgaenge):
+        geist = geist_mit(
+            nach_plan({zeit: Entscheidung({"Thema": u}) for zeit, u in enumerate(umgaenge)}),
+            erfahrungen=[erfahrung("Thema", 0.8)],
+            nachklang=1.0,
+        )
+        for _ in umgaenge:
+            geist.schritt()
+        return impuls(geist.schritt(), "Thema").faerbung
+
+    assert faerbung_nach() == 0.0
+    assert faerbung_nach(Umgang.VERLANGEN) == -0.5
+    assert faerbung_nach(Umgang.VERLANGEN, Umgang.VERLANGEN) == -0.75
+    assert faerbung_nach(Umgang.ENGAGE) == 0.5
+    assert faerbung_nach(Umgang.VERLANGEN, Umgang.ENGAGE) == 0.0
+
+
+def aui_mit_faerbung():
+    unterbewusstsein = aui(faerbekraft=0.5, ruhe=0.5)
+    for thema, bilanz in (("Negativ", -8), ("Neutral", 0), ("Heilsam", 8)):
+        unterbewusstsein.erlebe(erfahrung(thema, 0.4))
+        unterbewusstsein.umgangsbilanz[thema] = bilanz
+    return unterbewusstsein
+
+
+def staerken_bei(heilsamkeit):
+    feld = aui_mit_faerbung().erzeuge_impulse(0, [GEBIET], heilsamkeit=heilsamkeit)
+    staerken = {i.thema: round(i.staerke, 2) for i in feld}
+    return staerken["Negativ"], staerken["Neutral"], staerken["Heilsam"]
+
+
+def test_in_der_mitte_veraendert_die_haltung_die_impulse_nicht():
+    assert staerken_bei(0.0) == (0.4, 0.4, 0.4)
+
+
+def test_je_unheilsamer_desto_mehr_negative_und_desto_weniger_heilsame_impulse():
+    negativ, neutral, heilsam = staerken_bei(-1.0)
+    assert (negativ, neutral, heilsam) == (0.6, 0.4, 0.2)
+    assert staerken_bei(-0.5)[0] < negativ
+
+
+def test_je_heilsamer_desto_weniger_impulse_und_desto_eher_heilsame():
+    negativ, neutral, heilsam = staerken_bei(1.0)
+
+    # Insgesamt weniger als in der Mitte, und davon am ehesten das Heilsame.
+    assert sum((negativ, neutral, heilsam)) < sum(staerken_bei(0.0))
+    assert heilsam > neutral > negativ
+    assert (negativ, neutral, heilsam) == (0.1, 0.2, 0.3)
+
+
+def test_die_haltung_wirkt_erst_ab_dem_naechsten_moment_auf_die_impulse():
+    geist = geist_mit(
+        nach_plan({0: Entscheidung(themenwechsel=GEBIET)}),
+        erfahrungen=[erfahrung("Thema", 0.8)],
+        nachklang=1.0,
+        haltungsschritt=1.0,
+    )
+    verlauf = [staerke(geist.schritt(), "Thema") for _ in range(2)]
+    assert verlauf == [0.8, 0.4]

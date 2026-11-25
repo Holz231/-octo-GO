@@ -50,6 +50,16 @@ MBI aktiviert sie, indem sie ihr Thema dorthin wechselt.
 Jedes Themengebiet beeinflusst die Impulse des AUI, von stark bis gar nicht.
 Wie stark, ist durch Erfahrung gelernt.
 
+Die Haltung der MBI liegt auf einem Spektrum von heilsam zu unheilsam.
+Themengebiete selbst sind weder das eine noch das andere. Unheilsam wird die
+Haltung, wenn die MBI aus Verlangen engaged oder aus Abneigung disengaged, also
+auf das reagiert, was aus dem AUI in der ABI auftaucht. Heilsam wird sie durch
+engage und disengage ohne Verlangen und Abneigung und durch autonomes
+Ausrichten. Je unheilsamer die Haltung, desto mehr negative Impulse erzeugt das
+AUI und desto seltener heilsame. Je heilsamer, desto weniger Impulse insgesamt
+und desto eher heilsame. Negativ oder heilsam wird ein Impuls durch den Umgang
+der MBI mit seinem Thema.
+
 Gewohnheit entsteht durch Wiederholung: Je öfter die MBI zu einem Thema
 engaged, desto langsamer verblasst es im AUI. Engage und disengage geschehen
 aber nie von allein, es ist immer die MBI.
@@ -100,6 +110,21 @@ class Umgang(Enum):
     ENGAGE = "engage"
     DISENGAGE = "disengage"
     WEDER_NOCH = "weder noch"  # "non disengage and non engage"
+    # Die beiden unheilsamen Formen: Die MBI reagiert auf das, was auftaucht.
+    VERLANGEN = "Verlangen"  # engage aus Verlangen
+    ABNEIGUNG = "Abneigung"  # disengage aus Abneigung
+
+    @property
+    def ist_engage(self) -> bool:
+        return self in (Umgang.ENGAGE, Umgang.VERLANGEN)
+
+    @property
+    def ist_disengage(self) -> bool:
+        return self in (Umgang.DISENGAGE, Umgang.ABNEIGUNG)
+
+    @property
+    def unheilsam(self) -> bool:
+        return self in (Umgang.VERLANGEN, Umgang.ABNEIGUNG)
 
 
 @dataclass(frozen=True)
@@ -127,6 +152,8 @@ class Impuls:
     aus_haltung: bool = False
     # Wie oft die MBI dazu engaged hat, abzüglich der Male, die sie disengaged hat.
     gewohnheit: int = 0
+    # Von -1 (negativ) bis +1 (heilsam): wie die MBI bisher damit umgegangen ist.
+    faerbung: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -139,6 +166,7 @@ class Lage:
     sinne: Mapping[str, float]  # sensorische Eindrücke: Thema -> Stärke
     emotion: Mapping[str, float] = field(default_factory=dict)  # Emotionen dieses Moments
     koerper: Mapping[str, float] = field(default_factory=dict)  # Körperempfindungen
+    heilsamkeit: float = 0.0  # ihre Haltung: von -1 (unheilsam) bis +1 (heilsam)
 
     def staerke(self, thema: str) -> float:
         """Wie stark ein Thema im Feld der ABI auftaucht (0 = gar nicht)."""
@@ -165,6 +193,8 @@ STANDARD_WIRKUNG: Mapping[Umgang, float] = {
     Umgang.ENGAGE: 0.4,
     Umgang.DISENGAGE: -0.4,
     Umgang.WEDER_NOCH: 0.0,
+    Umgang.VERLANGEN: 0.4,
+    Umgang.ABNEIGUNG: -0.4,
 }
 
 
@@ -194,6 +224,8 @@ class Unterbewusstsein:
         praegung: float = 0.5,
         kopplung: float = 0.5,
         lerntempo: float = 2.0,
+        faerbekraft: float = 0.5,
+        ruhe: float = 0.5,
     ):
         # ANNAHME: Eine Erfahrung wirkt pro Moment um diesen Faktor schwächer nach.
         self.nachklang = nachklang
@@ -210,8 +242,16 @@ class Unterbewusstsein:
         # ANNAHME: Welchen Anteil seiner Stärke ein Thema an ein anderes
         # weitergibt, mit dem es fest verknüpft ist.
         self.kopplung = kopplung
+        # ANNAHME: Um welchen Anteil eine ganz unheilsame Haltung negative
+        # Impulse verstärkt und heilsame schwächt, und umgekehrt.
+        self.faerbekraft = faerbekraft
+        # ANNAHME: Um welchen Anteil eine ganz heilsame Haltung alle Impulse senkt.
+        self.ruhe = ruhe
         # Thema -> wie oft engaged, abzüglich wie oft disengaged.
         self.gewohnheit: dict[str, int] = {}
+        # Thema -> wie oft die MBI ohne Verlangen und Abneigung damit umgegangen
+        # ist, abzüglich der Male mit Verlangen oder Abneigung.
+        self.umgangsbilanz: dict[str, int] = {}
         # Zwei Themen -> wie oft sie im selben Moment erlebt wurden.
         self.verknuepfungen: dict[frozenset[str], int] = {}
         self.erfahrungen: list[Erfahrung] = []
@@ -228,6 +268,30 @@ class Unterbewusstsein:
     def uebe(self, thema: str, richtung: int) -> None:
         """Hält fest, dass die MBI engaged (+1) oder disengaged (-1) hat."""
         self.gewohnheit[thema] = self.gewohnheit.get(thema, 0) + richtung
+
+    def faerbe(self, thema: str, richtung: int) -> None:
+        """Hält fest, ob die MBI heilsam (+1) oder unheilsam (-1) mit dem Thema umging."""
+        self.umgangsbilanz[thema] = self.umgangsbilanz.get(thema, 0) + richtung
+
+    def faerbung(self, thema: str) -> float:
+        """Wie negativ (-1) oder heilsam (+1) die Impulse zu einem Thema sind."""
+        # ANNAHME: Die Färbung wächst mit jedem Umgang in dieselbe Richtung:
+        # nach einem Mal auf 0,5, nach zweien auf 0,75.
+        bilanz = self.umgangsbilanz.get(thema, 0)
+        betrag = 1 - 0.5 ** abs(bilanz)
+        return betrag if bilanz >= 0 else -betrag
+
+    def haltungsfaktor(self, thema: str, heilsamkeit: float) -> float:
+        """Wie die Haltung der MBI die Stärke eines Impulses verändert."""
+        # ANNAHME: Häufigkeit und Chance der Impulse sind hier als Stärke
+        # umgesetzt. Was öfter kommt, ist stärker.
+        faerbung = self.faerbung(thema)
+        # Unheilsam verstärkt Negatives und schwächt Heilsames, heilsam umgekehrt.
+        faktor = 1 + self.faerbekraft * heilsamkeit * faerbung
+        if heilsamkeit > 0:
+            # Je heilsamer die Haltung, desto weniger Impulse insgesamt.
+            faktor *= 1 - self.ruhe * heilsamkeit
+        return max(0.0, faktor)
 
     def nachklang_fuer(self, thema: str) -> float:
         """Wie langsam eine neue Erfahrung zu diesem Thema verblasst."""
@@ -266,12 +330,14 @@ class Unterbewusstsein:
         gebiete: Collection[str],
         im_abi_feld: Collection[str] = (),
         haltung: Collection[str] | None = None,
+        heilsamkeit: float = 0.0,
     ) -> list[Impuls]:
         """Füllt das Feld mit Impulsen, orientiert an den Gebieten.
 
         `im_abi_feld` sind die Themen, die bisher im Feld der ABI auftauchen.
         Sie bestimmen, was zur jetzigen Erfahrung gehört. `haltung` sind die
-        Gebiete der MBI unter `gebiete`; ohne Angabe sind es alle.
+        Gebiete der MBI unter `gebiete`; ohne Angabe sind es alle. `heilsamkeit`
+        ist, wo die Haltung der MBI zwischen unheilsam (-1) und heilsam (+1) liegt.
         """
         haltung = gebiete if haltung is None else haltung
         # Das einflussreichste Gebiet bestimmt, wie viel von allem, was nicht
@@ -333,6 +399,7 @@ class Unterbewusstsein:
 
         impulse = []
         for thema, staerke in staerken.items():
+            staerke *= self.haltungsfaktor(thema, heilsamkeit)
             if staerke < MINDESTSTAERKE:
                 continue
             je_gebiet = herkunft.get(thema, {})
@@ -353,6 +420,7 @@ class Unterbewusstsein:
                     tuple(mitgebracht_aus),
                     aus_haltung=stammt_aus_haltung,
                     gewohnheit=self.gewohnheit.get(thema, 0),
+                    faerbung=self.faerbung(thema),
                 )
             )
 
@@ -361,7 +429,7 @@ class Unterbewusstsein:
         # Gibt es zugleich ein Thema dieses Namens, zählt das Stärkere von beiden.
         themen = {impuls.thema: impuls for impuls in impulse}
         for frueher, je_thema in enthalten.items():
-            staerke = max(je_thema.values())
+            staerke = max(je_thema.values()) * self.haltungsfaktor(frueher, heilsamkeit)
             if frueher in themen:
                 staerke = max(staerke, themen[frueher].staerke)
             if staerke >= MINDESTSTAERKE:
@@ -370,6 +438,7 @@ class Unterbewusstsein:
                     min(1.0, staerke),
                     haltung=True,
                     gewohnheit=self.gewohnheit.get(frueher, 0),
+                    faerbung=self.faerbung(frueher),
                 )
 
         self.feld = sorted(themen.values(), key=lambda i: i.staerke, reverse=True)
@@ -464,9 +533,17 @@ class ManuelleBewussteIntention:
     Feld der ABI auftaucht. Das Feld des AUI bekommt sie nie zu sehen.
     """
 
-    def __init__(self, entscheider: Entscheider, gebiet: str):
+    def __init__(self, entscheider: Entscheider, gebiet: str, haltungsschritt: float = 0.2):
         self.entscheider = entscheider
         self.gebiete = [gebiet]
+        # Wo die Haltung zwischen unheilsam (-1) und heilsam (+1) liegt.
+        self.heilsamkeit = 0.0
+        # ANNAHME: Jede Handlung der MBI verschiebt die Haltung um diesen Betrag.
+        self.haltungsschritt = haltungsschritt
+
+    def _verschiebe(self, richtung: int) -> None:
+        verschoben = self.heilsamkeit + richtung * self.haltungsschritt
+        self.heilsamkeit = round(max(-1.0, min(1.0, verschoben)), 9)
 
     def richte_aus(self, lage: Lage) -> Mapping[str, Umgang]:
         """Fragt den Entscheider, ändert die Haltung und gibt den Umgang zurück."""
@@ -474,19 +551,26 @@ class ManuelleBewussteIntention:
         if entscheidung.themenwechsel:
             # ANNAHME: Ein Themenwechsel ersetzt alle bisherigen Gebiete.
             self.gebiete = [entscheidung.themenwechsel]
+            # Autonomes Ausrichten ist heilsam.
+            # ANNAHME: Themenerhalt ist, sich ausdrücklich auf das Gebiet zu
+            # richten, in dem man schon ist. Bloßes Nichtstun zählt nicht.
+            self._verschiebe(+1)
 
         # Umgehen kann die MBI nur mit dem, was im Feld der ABI auftaucht.
         im_feld = {impuls.thema: impuls for impuls in lage.abi_feld}
         umgang = {t: h for t, h in entscheidung.umgang.items() if t in im_feld}
         for thema, art in umgang.items():
-            if art is Umgang.ENGAGE:
+            if art is not Umgang.WEDER_NOCH:
+                # Aus Verlangen oder Abneigung: unheilsam. Ohne beides: heilsam.
+                self._verschiebe(-1 if art.unheilsam else +1)
+            if art.ist_engage:
                 if not im_feld[thema].aus_haltung:
                     # Aus einem anderen Gebiet: Es ersetzt die Haltung.
                     self.gebiete = [thema]
                 elif thema not in self.gebiete:
                     # Aus der jetzigen Haltung: Es läuft parallel zu ihr.
                     self.gebiete.append(thema)
-            elif art is Umgang.DISENGAGE and thema in self.gebiete:
+            elif art.ist_disengage and thema in self.gebiete:
                 self.gebiete.remove(thema)
         if not self.gebiete:
             # ANNAHME: Ohne ein eigenes Gebiet bleibt der MBI die jetzige Erfahrung.
@@ -534,6 +618,8 @@ class Moment:
     abi_feld: tuple[Impuls, ...]  # der Teil, der auch im Feld der ABI auftaucht
     umgang: Mapping[str, Umgang]  # Thema -> Umgang der MBI
     einfluss: Mapping[str, float]  # Gebiet -> wie stark es Fremdes zurückdrängt
+    heilsamkeit: float  # die Haltung der MBI: von -1 (unheilsam) bis +1 (heilsam)
+    heilsamkeit_danach: float  # wie sie ab dem nächsten Moment gilt
     verdraengt: tuple[str, ...]  # Gebiete, die nicht mehr in die Kapazität passten
     # Die Gebiete, wie sie ab dem nächsten Moment gelten.
     gebiete_danach: tuple[str, ...]
@@ -557,10 +643,15 @@ class Geist:
         chance: float = 0.25,
         zufall: random.Random | None = None,
         wirkung: Mapping[Umgang, float] = STANDARD_WIRKUNG,
+        haltungsschritt: float = 0.2,
+        faerbekraft: float = 0.5,
+        ruhe: float = 0.5,
     ):
-        self.unterbewusstsein = Unterbewusstsein(nachklang, mitnahme, praegung, kopplung)
+        self.unterbewusstsein = Unterbewusstsein(
+            nachklang, mitnahme, praegung, kopplung, faerbekraft=faerbekraft, ruhe=ruhe
+        )
         self.automatisch = AutomatischeBewussteIntention(schwelle, chance, zufall)
-        self.manuell = ManuelleBewussteIntention(entscheider, gebiet)
+        self.manuell = ManuelleBewussteIntention(entscheider, gebiet, haltungsschritt)
         self.wirkung = wirkung
         # ANNAHME: Die Kapazität der MBI entspricht einem Thema in voller Stärke.
         self.kapazitaet = kapazitaet
@@ -595,14 +686,17 @@ class Geist:
         }
         # ANNAHME: AUI und ABI orientieren sich auch an den Themengebieten, die
         # ohne die MBI entstanden sind.
+        heilsamkeit = self.manuell.heilsamkeit
         aui_feld = self.unterbewusstsein.erzeuge_impulse(
-            self.zeit, gebiete + gebiete_ohne_mbi, bisher_im_abi_feld, gebiete
+            self.zeit, gebiete + gebiete_ohne_mbi, bisher_im_abi_feld, gebiete, heilsamkeit
         )
         abi_feld = self.automatisch.nimm_wahr(aui_feld)
         # ANNAHME: Was im selben Moment erlebt wird, verknüpft sich miteinander.
         # Die Verknüpfung wirkt ab dem nächsten Moment.
         self.unterbewusstsein.verknuepfe([*sinne, *emotion, *koerper])
-        lage = Lage(gebiete, gebiete_ohne_mbi, tuple(abi_feld), sinne, emotion, koerper)
+        lage = Lage(
+            gebiete, gebiete_ohne_mbi, tuple(abi_feld), sinne, emotion, koerper, heilsamkeit
+        )
         # ANNAHME: Ein Wechsel der Gebiete gilt ab dem nächsten Moment.
         umgang = self.manuell.richte_aus(lage)
 
@@ -614,7 +708,9 @@ class Geist:
             # Wiederholung prägt: Engage macht das Thema zur Gewohnheit,
             # disengage baut sie wieder ab.
             if art is not Umgang.WEDER_NOCH:
-                self.unterbewusstsein.uebe(thema, 1 if art is Umgang.ENGAGE else -1)
+                self.unterbewusstsein.uebe(thema, 1 if art.ist_engage else -1)
+                # Durch den Umgang wird ein Thema negativ oder heilsam.
+                self.unterbewusstsein.faerbe(thema, -1 if art.unheilsam else 1)
             if wirkung:
                 # Die Erfahrung enthält die Haltung, in der die MBI dabei war.
                 self.unterbewusstsein.erlebe(Erfahrung(thema, wirkung, self.zeit, gebiete))
@@ -637,6 +733,8 @@ class Geist:
             lage.abi_feld,
             umgang,
             einfluss,
+            heilsamkeit,
+            self.manuell.heilsamkeit,
             tuple(verdraengt),
             tuple(self.manuell.gebiete),
             tuple(self.automatisch.gebiete_ohne_mbi),

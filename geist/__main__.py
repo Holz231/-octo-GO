@@ -8,6 +8,7 @@
     python -m geist --demo gewohnheit  wie wiederholtes engage ein Thema prägt
     python -m geist --demo emotion     wie Emotion und Erfahrung zusammen auftauchen
     python -m geist --demo einfluss    wie ein Gebiet durch Erfahrung an Einfluss gewinnt
+    python -m geist --demo heilsam     wie Abneigung die Haltung unheilsam macht
 
 Ein Thema mit Gewohnheit trägt in der Anzeige die Marke ↻ und die Zahl, wie
 oft die MBI dazu engaged hat, abzüglich der Male, die sie disengaged hat.
@@ -34,7 +35,13 @@ from .modell import (
 )
 
 BALKENBREITE = 20
-TASTEN = {"e": Umgang.ENGAGE, "d": Umgang.DISENGAGE, "w": Umgang.WEDER_NOCH}
+TASTEN = {
+    "e": Umgang.ENGAGE,
+    "d": Umgang.DISENGAGE,
+    "w": Umgang.WEDER_NOCH,
+    "v": Umgang.VERLANGEN,
+    "a": Umgang.ABNEIGUNG,
+}
 BESONDERE_GEBIETE = {
     "sinne": SINNE,
     "jetzt": JETZIGE_ERFAHRUNG,
@@ -60,8 +67,26 @@ def benenne(gebiete: tuple[str, ...], einfluss: Mapping[str, float] | None = Non
     return " + ".join(namen)
 
 
+def nenne_haltung(heilsamkeit: float) -> str:
+    """Wo die Haltung zwischen unheilsam und heilsam liegt, in Worten."""
+    if heilsamkeit > 0:
+        return f"heilsam {heilsamkeit:.0%}"
+    if heilsamkeit < 0:
+        return f"unheilsam {-heilsamkeit:.0%}"
+    return "weder heilsam noch unheilsam"
+
+
+def nenne_faerbung(faerbung: float) -> str:
+    if faerbung > 0:
+        return "heilsam"
+    if faerbung < 0:
+        return "negativ"
+    return "-"
+
+
 def zeige(moment: Moment, schwelle: float) -> None:
     kopf = f"\nMoment {moment.zeit} · Haltung der MBI: {benenne(moment.gebiete, moment.einfluss)}"
+    kopf += f", {nenne_haltung(moment.heilsamkeit)}"
     if moment.gebiete_ohne_mbi:
         kopf += f" · ohne MBI: {benenne(moment.gebiete_ohne_mbi, moment.einfluss)}"
     print(kopf)
@@ -81,7 +106,7 @@ def zeige(moment: Moment, schwelle: float) -> None:
         grenze = round(schwelle * BALKENBREITE)
         felder = f"{'AUI':<{grenze}}│{'ABI':<{BALKENBREITE - grenze}}"
         print(
-            f"  {'Thema':<{breite}}  {felder}  {'':4}  {'MBI':<10}"
+            f"  {'Thema':<{breite}}  {felder}  {'':4}  {'Impuls':<7}  {'MBI':<10}"
             f"  {'Themengebiet':<12}  mitgebracht aus"
         )
         for thema in themen:
@@ -101,11 +126,15 @@ def zeige(moment: Moment, schwelle: float) -> None:
             herkunft = ", ".join(impuls.mitgebracht_aus) if impuls else ""
             print(
                 f"  {namen[thema]:<{breite}}  {balken[:grenze]}│{balken[grenze:]}  {staerke:.2f}"
+                f"  {nenne_faerbung(impuls.faerbung):<7}"
                 f"  {umgang.value if umgang else '-':<10}  {gebiet:<12}  {herkunft or '-'}"
             )
     else:
         print("  (nichts)")
 
+    if moment.heilsamkeit_danach != moment.heilsamkeit:
+        richtung = "heilsamer" if moment.heilsamkeit_danach > moment.heilsamkeit else "unheilsamer"
+        print(f"  → Die Haltung wird {richtung}: {nenne_haltung(moment.heilsamkeit_danach)}")
     if moment.verdraengt:
         print(f"  → Zu viel für die MBI, verdrängt wird: {benenne(moment.verdraengt)}")
     if moment.gebiete_danach != moment.gebiete:
@@ -141,7 +170,7 @@ def demo_umgang() -> None:
         return Entscheidung(umgang)
 
     # Fester Zufall, damit der Ablauf jedes Mal gleich ist.
-    geist = Geist(entscheider, "Arbeit", zufall=random.Random(7), mitnahme=0.5)
+    geist = Geist(entscheider, "Arbeit", zufall=random.Random(7), mitnahme=0.5, haltungsschritt=0.0)
     for thema in ("Sorge", "Hunger", "Ohrwurm"):
         geist.unterbewusstsein.erlebe(Erfahrung(thema, 1.0, 0, ("Zuhause",)))
     for _ in range(7):
@@ -168,6 +197,7 @@ def demo_gebiete() -> None:
         "Familie",
         chance=0.0,
         mitnahme=0.5,
+        haltungsschritt=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 1.0, 0, ("Familie",)))
     for _ in range(5):
@@ -196,6 +226,7 @@ def demo_erinnerung() -> None:
         "Familie",
         chance=0.0,
         mitnahme=0.5,
+        haltungsschritt=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Streit", 0.9, -10, ("Familie",)))
     for _ in range(4):
@@ -226,6 +257,7 @@ def demo_haltung() -> None:
         "Arbeit",
         chance=0.0,
         mitnahme=0.5,
+        haltungsschritt=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 1.0, 0, ("Familie",)))
     for _ in range(5):
@@ -245,7 +277,7 @@ def demo_gewohnheit() -> None:
     def entscheider(lage: Lage) -> Entscheidung:
         return Entscheidung({"Grübeln": Umgang.ENGAGE} if geist.zeit < 3 else {})
 
-    geist = Geist(entscheider, "Abend", chance=0.0, kapazitaet=3.0, mitnahme=0.5)
+    geist = Geist(entscheider, "Abend", chance=0.0, kapazitaet=3.0, mitnahme=0.5, haltungsschritt=0.0)
     for thema in ("Grübeln", "Ohrwurm"):
         geist.unterbewusstsein.erlebe(Erfahrung(thema, 0.8, 0, ("Abend",)))
     for _ in range(9):
@@ -264,7 +296,7 @@ def demo_emotion() -> None:
     """
     sinne = {0: {"Streit": 0.9}, 6: {"Streit": 0.9}}
     emotion = {0: {"Wut": 0.7}}
-    geist = Geist(lambda lage: Entscheidung(), SINNE, chance=0.0, mitnahme=0.5)
+    geist = Geist(lambda lage: Entscheidung(), SINNE, chance=0.0, mitnahme=0.5, haltungsschritt=0.0)
     for zeit in range(8):
         moment = geist.schritt(sinne.get(zeit), emotion.get(zeit))
         zeige(moment, geist.automatisch.schwelle)
@@ -287,6 +319,7 @@ def demo_einfluss() -> None:
         nachklang=1.0,
         kapazitaet=9.0,
         chance=0.0,
+        haltungsschritt=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 0.9, 0, ("Familie",)))
     geist.unterbewusstsein.erlebe(Erfahrung("Malen", 0.5, 0, ("Hobby",)))
@@ -294,7 +327,41 @@ def demo_einfluss() -> None:
         zeige(geist.schritt(), geist.automatisch.schwelle)
 
 
+def demo_heilsam() -> None:
+    """Dieselbe Unruhe, zwei Arten, mit ihr umzugehen.
+
+    In jedem Moment kommt neue Unruhe auf. Die MBI ist im Gebiet der Emotion
+    und disengaged jedes Mal, wenn die Unruhe im Feld der ABI auftaucht: links
+    aus Abneigung, rechts ohne Abneigung. Beides schwächt die Unruhe im AUI
+    gleich stark. Aus Abneigung wird die Haltung aber unheilsam und die Unruhe
+    negativ, und das AUI erzeugt mehr davon. Ohne Abneigung wird die Haltung
+    heilsam, und das AUI erzeugt insgesamt weniger.
+    """
+
+    def lauf(umgang: Umgang) -> list[tuple[float, float]]:
+        def entscheider(lage: Lage) -> Entscheidung:
+            taucht_auf = any(impuls.thema == "Unruhe" for impuls in lage.abi_feld)
+            return Entscheidung({"Unruhe": umgang} if taucht_auf else {})
+
+        geist = Geist(entscheider, EMOTION, chance=0.0, mitnahme=0.5)
+        verlauf = []
+        for _ in range(9):
+            moment = geist.schritt(emotion={"Unruhe": 0.3})
+            unruhe = next((i.staerke for i in moment.aui_feld if i.thema == "Unruhe"), 0.0)
+            verlauf.append((unruhe, moment.heilsamkeit))
+        return verlauf
+
+    print(f"\n{'':8}  {'disengage aus Abneigung':<37}  disengage ohne Abneigung")
+    print(f"{'Moment':<8}  {'Unruhe':<7} {'Haltung':<29}  {'Unruhe':<7} Haltung")
+    for zeit, (aus_abneigung, ohne) in enumerate(zip(lauf(Umgang.ABNEIGUNG), lauf(Umgang.DISENGAGE))):
+        print(
+            f"{zeit:<8}  {aus_abneigung[0]:<7.2f} {nenne_haltung(aus_abneigung[1]):<29}"
+            f"  {ohne[0]:<7.2f} {nenne_haltung(ohne[1])}"
+        )
+
+
 DEMOS = {
+    "heilsam": demo_heilsam,
     "einfluss": demo_einfluss,
     "gewohnheit": demo_gewohnheit,
     "emotion": demo_emotion,
@@ -330,7 +397,7 @@ def lies_entscheidung(text: str) -> Entscheidung:
 
 def frage_entscheidung(lage: Lage) -> Entscheidung:
     feld = ", ".join(f"{i.thema} ({i.staerke:.2f})" for i in lage.abi_feld)
-    print(f"  Deine Haltung: {benenne(lage.gebiete)}")
+    print(f"  Deine Haltung: {benenne(lage.gebiete)}, {nenne_haltung(lage.heilsamkeit)}")
     if lage.gebiete_ohne_mbi:
         print(f"  Ohne dich:     {benenne(lage.gebiete_ohne_mbi)}")
     print(f"  ABI-Feld:      {feld or '-'}")
@@ -390,10 +457,15 @@ def interaktiv() -> None:
     print("              dazu. Kommt es aus einem anderen Gebiet, ersetzt es sie.")
     print("              Das geht auch mit einer früheren Haltung, die auftaucht.")
     print("   'd Thema'  disengage: schwächt das Thema, es gehört nicht mehr zu deiner Haltung.")
-    print("              Beides geht nur zu Themen, die im ABI-Feld auftauchen.")
+    print("              Beides geht nur zu Themen, die im ABI-Feld auftauchen, und")
+    print("              macht deine Haltung heilsamer.")
+    print("   'v Thema'  engage aus Verlangen, 'a Thema' disengage aus Abneigung:")
+    print("              Sie wirken auf das Thema wie engage und disengage, machen")
+    print("              deine Haltung aber unheilsamer und das Thema negativ.")
     print("   'g Gebiet' Themenwechsel, ohne etwas zu verstärken: in ein beliebiges")
     print("              Themengebiet, 'sinne', 'jetzt' (die jetzige Erfahrung),")
-    print("              'erinnerung', 'emotion' oder 'körper'.")
+    print("              'erinnerung', 'emotion' oder 'körper'. Das macht deine Haltung")
+    print("              heilsamer, auch wenn du dich auf dein jetziges Gebiet richtest.")
     print("   Leer = Themenerhalt und weder noch: Dann kann ein Thema im ABI-Feld")
     print("   von selbst zum Themengebiet werden.")
     try:
