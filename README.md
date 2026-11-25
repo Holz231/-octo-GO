@@ -174,13 +174,17 @@ Zum Spektrum von heilsam zu unheilsam:
   Viertel. Umgang in die andere Richtung hebt es wieder auf.
 - **Der Gesamtzustand** ist im Programm die Haltung der MBI.
 - **Mitgerissen werden ist eine Wahrscheinlichkeit.** In der Mitte zwischen
-  heilsam und unheilsam ist es sicher, wenn etwas allein die Kapazität der MBI
-  füllt, also bei voller Stärke. Darunter sinkt die Wahrscheinlichkeit: bei
-  Stärke 0,9 auf 60 %, bei 0,8 auf 20 %, ab 0,75 auf null.
-- **Wie der Gesamtzustand das verschiebt:** Bei ganz unheilsamer Haltung wird
-  die MBI schon bei halber Stärke sicher mitgerissen. Bei heilsam 20 % liegt
-  die Wahrscheinlichkeit selbst bei voller Stärke nur noch bei 60 %, ab
-  heilsam 50 % bei null.
+  heilsam und unheilsam ist sie am höchsten, wenn etwas allein die Kapazität
+  der MBI füllt, also bei voller Stärke. Darunter sinkt sie: bei Stärke 0,9 auf
+  60 %, bei 0,8 auf 20 %, ab 0,75 auf null.
+- **Wie der Gesamtzustand das verschiebt:** Bei ganz unheilsamer Haltung reicht
+  schon die halbe Stärke für die höchste Wahrscheinlichkeit. Bei heilsam 20 %
+  liegt sie selbst bei voller Stärke nur noch bei 60 %.
+- **Restchance in beide Richtungen:** Sicher ist nichts. Die Wahrscheinlichkeit
+  steigt nie über 95 %, auch nicht im ganz Unheilsamen. Und sie fällt für
+  alles, was die MBI in der Mitte mitreißen könnte, nie unter 5 %, auch nicht
+  im ganz Heilsamen. Was schon in der Mitte zu schwach wäre, reißt in
+  heilsamer Haltung nie mit.
 - **Was sicher davor bewahrt:** nur, im selben Moment selbst zu dem Thema zu
   engagen oder zu disengagen. Weder noch und ein Themenwechsel schützen
   nicht, sie lassen den Zufall entscheiden.

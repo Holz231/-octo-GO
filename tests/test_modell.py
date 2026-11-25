@@ -1094,8 +1094,26 @@ ZU_STARK = (erfahrung("Unruhe", 1.0),)
 NICHT_ZU_STARK = (erfahrung("Unruhe", 0.7),)
 
 
+class FesterZufall:
+    """Ein Zufall, der immer dieselbe Zahl liefert."""
+
+    def __init__(self, zahl):
+        self.zahl = zahl
+
+    def random(self):
+        return self.zahl
+
+
 def mitgerissen(entscheider=nichts, erfahrungen=ZU_STARK, **kwargs):
-    geist = geist_mit(entscheider, erfahrungen=erfahrungen, sog=True, haltungsschritt=0.2, **kwargs)
+    """Ein Moment, in dem der Zufall die MBI mitreißt, sobald es eine Chance dafür gibt."""
+    geist = geist_mit(
+        entscheider,
+        erfahrungen=erfahrungen,
+        sog=True,
+        haltungsschritt=0.2,
+        zufall=FesterZufall(0.0),
+        **kwargs,
+    )
     return geist.schritt()
 
 
@@ -1115,7 +1133,9 @@ def test_was_nicht_zu_stark_ist_reisst_die_mbi_nicht_mit():
 
 
 def test_ein_negativer_impuls_allein_verschiebt_die_haltung_nicht():
-    geist = geist_mit(erfahrungen=NICHT_ZU_STARK, sog=True, haltungsschritt=0.2)
+    geist = geist_mit(
+        erfahrungen=NICHT_ZU_STARK, sog=True, haltungsschritt=0.2, zufall=FesterZufall(0.0)
+    )
     geist.unterbewusstsein.umgangsbilanz["Unruhe"] = -8
     moment = geist.schritt()
 
@@ -1139,7 +1159,13 @@ def test_weder_noch_und_themenwechsel_bewahren_nicht_davor():
 
 
 def mitgerissen_bei(heilsamkeit, staerke_der_unruhe, entscheider=nichts):
-    geist = geist_mit(entscheider, erfahrungen=[erfahrung("Unruhe", staerke_der_unruhe)], sog=True)
+    """Ob der Zufall die MBI hier mitreißen kann, also ob es eine Chance dafür gibt."""
+    geist = geist_mit(
+        entscheider,
+        erfahrungen=[erfahrung("Unruhe", staerke_der_unruhe)],
+        sog=True,
+        zufall=FesterZufall(0.0),
+    )
     geist.manuell.heilsamkeit = heilsamkeit
     # Die Haltung soll hier nur die Schwelle verschieben, nicht die Impulse.
     geist.unterbewusstsein.ruhe = 0.0
@@ -1152,31 +1178,31 @@ def test_je_unheilsamer_der_zustand_desto_weniger_reicht_um_mitgerissen_zu_werde
     assert mitgerissen_bei(heilsamkeit=-1.0, staerke_der_unruhe=0.5)
 
 
-def test_in_ganz_heilsamer_haltung_kann_die_mbi_auch_sehr_starkes_da_sein_lassen():
-    weder_noch = immer(Umgang.WEDER_NOCH, "Unruhe")
+def test_in_heilsamer_haltung_kann_die_mbi_auch_sehr_starkes_meist_da_sein_lassen():
+    chance = mbi_mit("A").sogchance
+    assert chance(1.0, 0.0) == 0.95
+    assert chance(1.0, 1.0) == 0.05
 
-    assert mitgerissen_bei(heilsamkeit=0.0, staerke_der_unruhe=1.0, entscheider=weder_noch)
-    assert not mitgerissen_bei(heilsamkeit=1.0, staerke_der_unruhe=1.0, entscheider=weder_noch)
+
+def test_auch_in_den_extremen_bleibt_eine_restchance_in_beide_richtungen():
+    chance = mbi_mit("A").sogchance
+
+    # Ganz unheilsam: fast sicher mitgerissen, aber nie ganz sicher.
+    assert [chance(staerke, -1.0) for staerke in (0.5, 0.8, 1.0)] == [0.95, 0.95, 0.95]
+    # Ganz heilsam: Was in der Mitte mitreißen könnte, kann es auch hier noch.
+    assert [chance(staerke, 1.0) for staerke in (0.8, 0.9, 1.0)] == [0.05, 0.05, 0.05]
+    # Was auch in der Mitte zu schwach wäre, reißt in heilsamer Haltung nie mit.
+    assert chance(0.7, 1.0) == 0.0
 
 
 def test_ob_die_mbi_mitgerissen_wird_ist_eine_wahrscheinlichkeit():
     chance = mbi_mit("A").sogchance
 
     # In der Mitte: sicher bei voller Stärke, darunter immer unwahrscheinlicher.
-    assert [chance(staerke, 0.0) for staerke in (1.0, 0.9, 0.8, 0.75, 0.5)] == [1.0, 0.6, 0.2, 0.0, 0.0]
+    assert [chance(staerke, 0.0) for staerke in (1.0, 0.9, 0.8, 0.75, 0.5)] == [0.95, 0.6, 0.2, 0.0, 0.0]
     # Je unheilsamer, desto wahrscheinlicher, je heilsamer, desto unwahrscheinlicher.
-    assert [chance(0.9, h) for h in (-0.4, -0.2, 0.0, 0.2)] == [1.0, 1.0, 0.6, 0.2]
-    assert [chance(1.0, h) for h in (0.0, 0.2, 0.4, 0.6)] == [1.0, 0.6, 0.2, 0.0]
-
-
-class FesterZufall:
-    """Ein Zufall, der immer dieselbe Zahl liefert."""
-
-    def __init__(self, zahl):
-        self.zahl = zahl
-
-    def random(self):
-        return self.zahl
+    assert [chance(0.9, h) for h in (-0.4, -0.2, 0.0, 0.2)] == [0.95, 0.95, 0.6, 0.2]
+    assert [chance(1.0, h) for h in (0.0, 0.2, 0.4, 0.6)] == [0.95, 0.6, 0.2, 0.05]
 
 
 def test_bei_einer_wahrscheinlichkeit_dazwischen_entscheidet_der_zufall():
@@ -1195,7 +1221,7 @@ def test_zu_stark_ist_was_allein_die_kapazitaet_der_mbi_fuellt():
 
 
 def test_mitgerissen_werden_verstaerkt_das_thema_und_macht_es_negativ():
-    geist = geist_mit(erfahrungen=ZU_STARK, sog=True)
+    geist = geist_mit(erfahrungen=ZU_STARK, sog=True, zufall=FesterZufall(0.0))
     geist.schritt()
     neu = geist.unterbewusstsein.erfahrungen[-1]
 

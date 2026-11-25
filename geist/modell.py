@@ -594,6 +594,7 @@ class ManuelleBewussteIntention:
         sog: float | None = 1.0,
         anfaelligkeit: float = 0.5,
         uebergang: float = 0.25,
+        restchance: float = 0.05,
         zufall: random.Random | None = None,
     ):
         self.entscheider = entscheider
@@ -602,6 +603,9 @@ class ManuelleBewussteIntention:
         # ANNAHME: Über diese Spanne unterhalb der Stärke, bei der die MBI
         # sicher mitgerissen wird, steigt die Wahrscheinlichkeit von 0 auf 1.
         self.uebergang = uebergang
+        # ANNAHME: Wie viel Zufall auch in den Extremen bleibt. Sicher ist
+        # weder, dass die MBI mitgerissen wird, noch dass sie es nicht wird.
+        self.restchance = restchance
         # Ab welcher Stärke etwas in der ABI so stark ist, dass die MBI sich
         # sicher aus Verlangen darauf richtet, wenn ihre Haltung in der Mitte
         # liegt. None schaltet das ab.
@@ -620,10 +624,20 @@ class ManuelleBewussteIntention:
         """Mit welcher Wahrscheinlichkeit etwas dieser Stärke die MBI mitreißt."""
         if self.sog is None:
             return 0.0
-        # Je unheilsamer der Gesamtzustand, desto weniger Stärke reicht aus. Je
-        # heilsamer, desto eher kann die MBI auch sehr Starkes da sein lassen.
-        sicher_ab = self.sog * (1 + self.anfaelligkeit * heilsamkeit)
-        return round(max(0.0, min(1.0, 1 - (sicher_ab - staerke) / self.uebergang)), 9)
+
+        def rampe(heilsamkeit: float) -> float:
+            # Je unheilsamer der Gesamtzustand, desto weniger Stärke reicht aus.
+            # Je heilsamer, desto eher kann die MBI auch Starkes da sein lassen.
+            voll_ab = self.sog * (1 + self.anfaelligkeit * heilsamkeit)
+            return max(0.0, min(1.0, 1 - (voll_ab - staerke) / self.uebergang))
+
+        # Auch in den Extremen bleibt eine Restchance in beide Richtungen.
+        chance = min(rampe(heilsamkeit), 1 - self.restchance)
+        # ANNAHME: Die Restchance, doch mitgerissen zu werden, hat nur, was die
+        # MBI in der Mitte zwischen heilsam und unheilsam mitreißen könnte.
+        if rampe(0.0) > 0:
+            chance = max(chance, self.restchance)
+        return round(chance, 9)
 
     def _verschiebe(self, richtung: int) -> None:
         verschoben = self.heilsamkeit + richtung * self.haltungsschritt
@@ -654,7 +668,7 @@ class ManuelleBewussteIntention:
             if umgang.get(impuls.thema, Umgang.WEDER_NOCH) is not Umgang.WEDER_NOCH:
                 continue
             chance = self.sogchance(impuls.staerke, lage.heilsamkeit)
-            if chance >= 1 or (chance > 0 and self.zufall.random() < chance):
+            if chance > 0 and self.zufall.random() < chance:
                 umgang[impuls.thema] = Umgang.VERLANGEN
                 self.mitgerissen.append(impuls.thema)
 
