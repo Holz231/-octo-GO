@@ -279,13 +279,25 @@ def test_disengage_beendet_ein_themengebiet_das_ohne_mbi_entstanden_ist():
 # --- Gebiete: die MBI bewegt sich, AUI und ABI orientieren sich daran ---
 
 
-def test_mbi_kann_sich_auf_ein_gebiet_richten_ohne_etwas_zu_verstaerken():
-    geist = geist_mit(nach_plan({0: Entscheidung(gebiet="Arbeit")}), "Familie")
+def test_mbi_richtet_sich_autonom_auf_ein_gebiet_das_nie_im_bewusstsein_war():
+    geist = geist_mit(nach_plan({0: Entscheidung(gebiet="Urlaub")}), "Familie")
     erster, zweiter = geist.schritt(), geist.schritt()
 
-    assert (erster.gebiete, erster.gebiete_danach) == (("Familie",), ("Arbeit",))
-    assert zweiter.gebiete == ("Arbeit",)
+    # Nichts ist aus dem AUI in die ABI gestiegen, und trotzdem wechselt die MBI.
+    assert erster.aui_feld == erster.abi_feld == ()
+    assert (erster.gebiete, erster.gebiete_danach) == (("Familie",), ("Urlaub",))
+    assert zweiter.gebiete == ("Urlaub",)
+    # Sich nur zu richten, verstärkt nichts im AUI.
     assert geist.unterbewusstsein.erfahrungen == []
+
+
+def test_engage_macht_auch_ein_nie_bewusstes_thema_zum_gebiet_der_mbi():
+    geist = geist_mit(nach_plan({0: Entscheidung({"Urlaub": Haltung.ENGAGE})}), "Familie")
+    erster, zweiter = geist.schritt(), geist.schritt()
+
+    assert erster.aui_feld == ()
+    assert zweiter.gebiete == ("Urlaub",)
+    assert im_feld(zweiter) == ["Urlaub"]
 
 
 def test_richten_stellt_das_gebiet_parallel_wenn_die_mbi_mehrere_haelt():

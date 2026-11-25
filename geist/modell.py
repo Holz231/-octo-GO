@@ -249,8 +249,9 @@ class ManuelleBewussteIntention:
     """MBI. Manuell und bewusst: was man willentlich lenkt.
 
     Sie agiert immer in mindestens einem Gebiet: in einem Themengebiet, in der
-    jetzigen Erfahrung oder in den Sinnen. Das Feld des AUI bekommt sie nie zu
-    sehen.
+    jetzigen Erfahrung oder in den Sinnen. Sie kann sich autonom auf neue
+    Themengebiete richten, auch auf solche, die vorher nicht im Bewusstsein
+    waren. Das Feld des AUI bekommt sie nie zu sehen.
     """
 
     def __init__(self, entscheider: Entscheider, gebiet: str, mehrere: bool = False):

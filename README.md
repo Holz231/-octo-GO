@@ -57,7 +57,10 @@ Festgelegt:
      schwächt nicht. Es bringt aber die Chance mit, dass das Thema ohne die MBI
      aus dem AUI in die ABI geht und dort ohne die MBI zu einem neuen
      Themengebiet wird. Oder eben nicht, dann verblasst es wieder.
-8. Die MBI hat keinen direkten Zugriff auf das AUI. Sie erreicht es nur
+8. Die MBI kann sich auch autonom auf neue Themengebiete richten, auch wenn
+   sie vorher nicht im Bewusstsein waren, also ohne dass etwas aus dem AUI in
+   die ABI gestiegen ist.
+9. Die MBI hat keinen direkten Zugriff auf das AUI. Sie erreicht es nur
    indirekt.
 
 Bewusst zurückgestellt: Grenzen der MBI (Aufmerksamkeit, Energie),
@@ -79,9 +82,10 @@ Zu den Haltungen:
   MBI, hört es durch disengage auf, eines zu sein.
 - **Ohne eigenes Gebiet:** Gibt die MBI ihr letztes Gebiet auf, bleibt ihr die
   jetzige Erfahrung.
-- **Richten ohne engage:** Die MBI kann sich auch auf ein Gebiet richten, ohne
-  ein Thema zu verstärken. So kommt sie in die Sinne oder in die jetzige
-  Erfahrung.
+- **Zwei Wege, sich autonom zu richten:** Die MBI kann zu einem frei gewählten
+  Thema engagen, dann wird es zugleich im AUI verstärkt. Oder sie richtet sich
+  nur auf ein Gebiet, ohne etwas zu verstärken. Auf dem zweiten Weg kommt sie
+  auch in die Sinne oder in die jetzige Erfahrung.
 
 Zu den Themengebieten ohne MBI:
 
