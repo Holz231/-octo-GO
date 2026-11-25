@@ -9,6 +9,7 @@
     python -m geist --demo emotion     wie Emotion und Erfahrung zusammen auftauchen
     python -m geist --demo einfluss    wie ein Gebiet durch Erfahrung an Einfluss gewinnt
     python -m geist --demo heilsam     wie Abneigung die Haltung unheilsam macht
+    python -m geist --demo sog         wie etwas zu Starkes die MBI mitreißt
 
 Ein Thema mit Gewohnheit trägt in der Anzeige die Marke ↻ und die Zahl, wie
 oft die MBI dazu engaged hat, abzüglich der Male, die sie disengaged hat.
@@ -132,6 +133,8 @@ def zeige(moment: Moment, schwelle: float) -> None:
     else:
         print("  (nichts)")
 
+    for thema in moment.mitgerissen:
+        print(f"  → Zu stark: Die MBI richtet sich aus Verlangen auf {thema}")
     if moment.heilsamkeit_danach != moment.heilsamkeit:
         richtung = "heilsamer" if moment.heilsamkeit_danach > moment.heilsamkeit else "unheilsamer"
         print(f"  → Die Haltung wird {richtung}: {nenne_haltung(moment.heilsamkeit_danach)}")
@@ -170,7 +173,7 @@ def demo_umgang() -> None:
         return Entscheidung(umgang)
 
     # Fester Zufall, damit der Ablauf jedes Mal gleich ist.
-    geist = Geist(entscheider, "Arbeit", zufall=random.Random(7), mitnahme=0.5, haltungsschritt=0.0)
+    geist = Geist(entscheider, "Arbeit", zufall=random.Random(7), mitnahme=0.5, haltungsschritt=0.0, sog=False)
     for thema in ("Sorge", "Hunger", "Ohrwurm"):
         geist.unterbewusstsein.erlebe(Erfahrung(thema, 1.0, 0, ("Zuhause",)))
     for _ in range(7):
@@ -198,6 +201,7 @@ def demo_gebiete() -> None:
         chance=0.0,
         mitnahme=0.5,
         haltungsschritt=0.0,
+        sog=False,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 1.0, 0, ("Familie",)))
     for _ in range(5):
@@ -227,6 +231,7 @@ def demo_erinnerung() -> None:
         chance=0.0,
         mitnahme=0.5,
         haltungsschritt=0.0,
+        sog=False,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Streit", 0.9, -10, ("Familie",)))
     for _ in range(4):
@@ -258,6 +263,7 @@ def demo_haltung() -> None:
         chance=0.0,
         mitnahme=0.5,
         haltungsschritt=0.0,
+        sog=False,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 1.0, 0, ("Familie",)))
     for _ in range(5):
@@ -277,7 +283,7 @@ def demo_gewohnheit() -> None:
     def entscheider(lage: Lage) -> Entscheidung:
         return Entscheidung({"Grübeln": Umgang.ENGAGE} if geist.zeit < 3 else {})
 
-    geist = Geist(entscheider, "Abend", chance=0.0, kapazitaet=3.0, mitnahme=0.5, haltungsschritt=0.0)
+    geist = Geist(entscheider, "Abend", chance=0.0, kapazitaet=3.0, mitnahme=0.5, haltungsschritt=0.0, sog=False)
     for thema in ("Grübeln", "Ohrwurm"):
         geist.unterbewusstsein.erlebe(Erfahrung(thema, 0.8, 0, ("Abend",)))
     for _ in range(9):
@@ -296,7 +302,7 @@ def demo_emotion() -> None:
     """
     sinne = {0: {"Streit": 0.9}, 6: {"Streit": 0.9}}
     emotion = {0: {"Wut": 0.7}}
-    geist = Geist(lambda lage: Entscheidung(), SINNE, chance=0.0, mitnahme=0.5, haltungsschritt=0.0)
+    geist = Geist(lambda lage: Entscheidung(), SINNE, chance=0.0, mitnahme=0.5, haltungsschritt=0.0, sog=False)
     for zeit in range(8):
         moment = geist.schritt(sinne.get(zeit), emotion.get(zeit))
         zeige(moment, geist.automatisch.schwelle)
@@ -320,6 +326,7 @@ def demo_einfluss() -> None:
         kapazitaet=9.0,
         chance=0.0,
         haltungsschritt=0.0,
+        sog=False,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 0.9, 0, ("Familie",)))
     geist.unterbewusstsein.erlebe(Erfahrung("Malen", 0.5, 0, ("Hobby",)))
@@ -343,7 +350,7 @@ def demo_heilsam() -> None:
             taucht_auf = any(impuls.thema == "Unruhe" for impuls in lage.abi_feld)
             return Entscheidung({"Unruhe": umgang} if taucht_auf else {})
 
-        geist = Geist(entscheider, EMOTION, chance=0.0, mitnahme=0.5)
+        geist = Geist(entscheider, EMOTION, chance=0.0, mitnahme=0.5, sog=False)
         verlauf = []
         for _ in range(9):
             moment = geist.schritt(emotion={"Unruhe": 0.3})
@@ -360,7 +367,32 @@ def demo_heilsam() -> None:
         )
 
 
+def demo_sog() -> None:
+    """Etwas wird zu stark, und die MBI reagiert aus Verlangen darauf.
+
+    In jedem Moment kommt neue Unruhe auf. Die MBI ist im Gebiet der Emotion
+    und lässt sie zunächst einfach da sein. Die Unruhe sammelt sich an, bis sie
+    allein die Kapazität der MBI füllt. In Moment 4 und 5 richtet sich die MBI
+    deshalb aus Verlangen darauf: Die Haltung wird unheilsam, die Unruhe
+    negativ, und sie bleibt auf voller Stärke. Ab Moment 6 disengaged die MBI
+    selbst, ohne Abneigung. Das bewahrt sie davor, mitgerissen zu werden. Die
+    Haltung wird Schritt für Schritt wieder heilsamer, und einige Momente
+    später geht auch die Unruhe zurück.
+    """
+
+    def entscheider(lage: Lage) -> Entscheidung:
+        taucht_auf = any(impuls.thema == "Unruhe" for impuls in lage.abi_feld)
+        if geist.zeit >= 6 and taucht_auf:
+            return Entscheidung({"Unruhe": Umgang.DISENGAGE})
+        return Entscheidung()
+
+    geist = Geist(entscheider, EMOTION, chance=0.0, mitnahme=0.5)
+    for _ in range(14):
+        zeige(geist.schritt(emotion={"Unruhe": 0.3}), geist.automatisch.schwelle)
+
+
 DEMOS = {
+    "sog": demo_sog,
     "heilsam": demo_heilsam,
     "einfluss": demo_einfluss,
     "gewohnheit": demo_gewohnheit,
@@ -462,6 +494,8 @@ def interaktiv() -> None:
     print("   'v Thema'  engage aus Verlangen, 'a Thema' disengage aus Abneigung:")
     print("              Sie wirken auf das Thema wie engage und disengage, machen")
     print("              deine Haltung aber unheilsamer und das Thema negativ.")
+    print("   Wird etwas im ABI-Feld zu stark (1.00), richtest du dich von selbst aus")
+    print("   Verlangen darauf, außer du engagest oder disengagest es in dem Moment.")
     print("   'g Gebiet' Themenwechsel, ohne etwas zu verstärken: in ein beliebiges")
     print("              Themengebiet, 'sinne', 'jetzt' (die jetzige Erfahrung),")
     print("              'erinnerung', 'emotion' oder 'körper'. Das macht deine Haltung")

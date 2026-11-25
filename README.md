@@ -16,6 +16,7 @@ welche Lücken das Programm vorläufig mit eigenen Annahmen füllt.
     python -m geist --demo emotion     # wie Emotion und Erfahrung zusammen auftauchen
     python -m geist --demo einfluss    # wie ein Gebiet durch Erfahrung an Einfluss gewinnt
     python -m geist --demo heilsam     # wie Abneigung die Haltung unheilsam macht
+    python -m geist --demo sog         # wie etwas zu Starkes die MBI mitreißt
     python -m geist                    # interaktiv: du bist die MBI
     python -m pytest                   # Tests
 
@@ -113,6 +114,10 @@ Festgelegt:
 19. Negativ oder heilsam wird ein einzelner Impuls durch den Umgang der MBI
     mit seinem Thema: negativ durch Verlangen oder Abneigung, heilsam ohne
     beides. Es ist also gelernt.
+20. Ein negativer Impuls in der ABI verschiebt die Haltung noch nicht. Das
+    geschieht erst, wenn die MBI aus Verlangen reagiert. Dazu kommt es, wenn
+    etwas aus dem AUI in der ABI zu stark wird, sodass die MBI sich darauf
+    richtet.
 
 ## 3. Vorläufige Annahmen im Programm
 
@@ -160,9 +165,14 @@ Zum Spektrum von heilsam zu unheilsam:
 - **Wie negativ oder heilsam ein Thema ist,** wächst mit jedem Umgang in
   dieselbe Richtung, nach einem Mal auf die Hälfte, nach zweien auf drei
   Viertel. Umgang in die andere Richtung hebt es wieder auf.
-- **Der Einfluss des AUI auf die Haltung** läuft im Programm nur darüber, was
-  es auftauchen lässt und worauf die MBI dann reagiert. Von selbst verschiebt
-  nichts die Haltung.
+- **Wann etwas zu stark ist:** wenn es allein die Kapazität der MBI füllt,
+  also bei voller Stärke. Dann richtet sich die MBI aus Verlangen darauf, als
+  hätte sie selbst so entschieden.
+- **Was davor bewahrt:** nur, im selben Moment selbst zu dem Thema zu engagen
+  oder zu disengagen. Weder noch und ein Themenwechsel reichen nicht.
+- **Es ist immer Verlangen.** Dass die MBI von etwas zu Starkem aus Abneigung
+  weggerissen wird, gibt es im Programm nicht.
+- **In den Demo-Läufen** außer `sog` ist das abgeschaltet.
 
 Zum Einfluss der Gebiete auf die Impulse des AUI. Eingebaut sind zwei Wege:
 Ein Gebiet drängt zurück, was nicht zu ihm gehört, und ein Thema zieht

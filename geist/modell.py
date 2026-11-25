@@ -53,7 +53,9 @@ Wie stark, ist durch Erfahrung gelernt.
 Die Haltung der MBI liegt auf einem Spektrum von heilsam zu unheilsam.
 Themengebiete selbst sind weder das eine noch das andere. Unheilsam wird die
 Haltung, wenn die MBI aus Verlangen engaged oder aus Abneigung disengaged, also
-auf das reagiert, was aus dem AUI in der ABI auftaucht. Heilsam wird sie durch
+auf das reagiert, was aus dem AUI in der ABI auftaucht. Aus Verlangen reagiert
+sie, wenn etwas aus dem AUI in der ABI zu stark wird, sodass sie sich darauf
+richtet. Ein negativer Impuls allein verschiebt die Haltung noch nicht. Heilsam wird sie durch
 engage und disengage ohne Verlangen und Abneigung und durch autonomes
 Ausrichten. Je unheilsamer die Haltung, desto mehr negative Impulse erzeugt das
 AUI und desto seltener heilsame. Je heilsamer, desto weniger Impulse insgesamt
@@ -533,9 +535,20 @@ class ManuelleBewussteIntention:
     Feld der ABI auftaucht. Das Feld des AUI bekommt sie nie zu sehen.
     """
 
-    def __init__(self, entscheider: Entscheider, gebiet: str, haltungsschritt: float = 0.2):
+    def __init__(
+        self,
+        entscheider: Entscheider,
+        gebiet: str,
+        haltungsschritt: float = 0.2,
+        sog: float | None = 1.0,
+    ):
         self.entscheider = entscheider
         self.gebiete = [gebiet]
+        # Ab welcher Stärke etwas in der ABI zu stark ist, sodass die MBI sich
+        # aus Verlangen darauf richtet. None schaltet das ab.
+        self.sog = sog
+        # Worauf sie sich im letzten Moment deshalb gerichtet hat.
+        self.mitgerissen: list[str] = []
         # Wo die Haltung zwischen unheilsam (-1) und heilsam (+1) liegt.
         self.heilsamkeit = 0.0
         # ANNAHME: Jede Handlung der MBI verschiebt die Haltung um diesen Betrag.
@@ -559,6 +572,18 @@ class ManuelleBewussteIntention:
         # Umgehen kann die MBI nur mit dem, was im Feld der ABI auftaucht.
         im_feld = {impuls.thema: impuls for impuls in lage.abi_feld}
         umgang = {t: h for t, h in entscheidung.umgang.items() if t in im_feld}
+
+        # Wird etwas in der ABI zu stark, richtet sich die MBI aus Verlangen darauf.
+        # ANNAHME: Davor bewahrt nur, im selben Moment selbst zu engagen oder
+        # zu disengagen. Weder noch und ein Themenwechsel reichen nicht.
+        self.mitgerissen = []
+        if self.sog is not None:
+            for impuls in lage.abi_feld:
+                gewaehlt = umgang.get(impuls.thema, Umgang.WEDER_NOCH)
+                if impuls.staerke >= self.sog and gewaehlt is Umgang.WEDER_NOCH:
+                    umgang[impuls.thema] = Umgang.VERLANGEN
+                    self.mitgerissen.append(impuls.thema)
+
         for thema, art in umgang.items():
             if art is not Umgang.WEDER_NOCH:
                 # Aus Verlangen oder Abneigung: unheilsam. Ohne beides: heilsam.
@@ -617,6 +642,8 @@ class Moment:
     aui_feld: tuple[Impuls, ...]  # alles, was im Feld des AUI liegt
     abi_feld: tuple[Impuls, ...]  # der Teil, der auch im Feld der ABI auftaucht
     umgang: Mapping[str, Umgang]  # Thema -> Umgang der MBI
+    # Themen, die zu stark waren, sodass die MBI aus Verlangen darauf reagiert hat.
+    mitgerissen: tuple[str, ...]
     einfluss: Mapping[str, float]  # Gebiet -> wie stark es Fremdes zurückdrängt
     heilsamkeit: float  # die Haltung der MBI: von -1 (unheilsam) bis +1 (heilsam)
     heilsamkeit_danach: float  # wie sie ab dem nächsten Moment gilt
@@ -646,12 +673,17 @@ class Geist:
         haltungsschritt: float = 0.2,
         faerbekraft: float = 0.5,
         ruhe: float = 0.5,
+        sog: bool = True,
     ):
         self.unterbewusstsein = Unterbewusstsein(
             nachklang, mitnahme, praegung, kopplung, faerbekraft=faerbekraft, ruhe=ruhe
         )
         self.automatisch = AutomatischeBewussteIntention(schwelle, chance, zufall)
-        self.manuell = ManuelleBewussteIntention(entscheider, gebiet, haltungsschritt)
+        # ANNAHME: Zu stark ist ein Thema, wenn es allein die Kapazität der MBI
+        # füllt. Mit `sog=False` wird die MBI nie mitgerissen.
+        self.manuell = ManuelleBewussteIntention(
+            entscheider, gebiet, haltungsschritt, kapazitaet if sog else None
+        )
         self.wirkung = wirkung
         # ANNAHME: Die Kapazität der MBI entspricht einem Thema in voller Stärke.
         self.kapazitaet = kapazitaet
@@ -732,6 +764,7 @@ class Geist:
             tuple(aui_feld),
             lage.abi_feld,
             umgang,
+            tuple(self.manuell.mitgerissen),
             einfluss,
             heilsamkeit,
             self.manuell.heilsamkeit,

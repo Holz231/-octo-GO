@@ -36,6 +36,7 @@ def geist_mit(
     chance=0.0,
     mitnahme=0.5,
     haltungsschritt=0.0,
+    sog=False,
     **kwargs,
 ):
     """Ein Geist, bei dem jeder Test nur das sieht, was er prüft.
@@ -44,7 +45,8 @@ def geist_mit(
     halber Stärke mit; `mitnahme=None` lässt den Einfluss der Gebiete durch
     Erfahrung entstehen, wie im Modell. Die Haltung bleibt in der Mitte
     zwischen heilsam und unheilsam; erst ein `haltungsschritt` lässt sie sich
-    verschieben.
+    verschieben. Und die MBI wird von nichts mitgerissen, solange `sog` nicht
+    eingeschaltet ist.
     """
     geist = Geist(
         entscheider,
@@ -52,6 +54,7 @@ def geist_mit(
         chance=chance,
         mitnahme=mitnahme,
         haltungsschritt=haltungsschritt,
+        sog=sog,
         **kwargs,
     )
     for e in erfahrungen:
@@ -1080,3 +1083,68 @@ def test_die_haltung_wirkt_erst_ab_dem_naechsten_moment_auf_die_impulse():
     )
     verlauf = [staerke(geist.schritt(), "Thema") for _ in range(2)]
     assert verlauf == [0.8, 0.4]
+
+
+# --- Wird etwas in der ABI zu stark, richtet sich die MBI aus Verlangen darauf ---
+
+ZU_STARK = (erfahrung("Unruhe", 1.0),)
+NICHT_ZU_STARK = (erfahrung("Unruhe", 0.9),)
+
+
+def mitgerissen(entscheider=nichts, erfahrungen=ZU_STARK, **kwargs):
+    geist = geist_mit(entscheider, erfahrungen=erfahrungen, sog=True, haltungsschritt=0.2, **kwargs)
+    return geist.schritt()
+
+
+def test_was_zu_stark_wird_laesst_die_mbi_aus_verlangen_reagieren():
+    moment = mitgerissen()
+
+    assert moment.mitgerissen == ("Unruhe",)
+    assert moment.umgang == {"Unruhe": Umgang.VERLANGEN}
+    assert moment.heilsamkeit_danach == -0.2
+    # Die Unruhe füllt die Kapazität allein und verdrängt das bisherige Gebiet.
+    assert moment.gebiete_danach == ("Unruhe",)
+
+
+def test_was_nicht_zu_stark_ist_reisst_die_mbi_nicht_mit():
+    moment = mitgerissen(erfahrungen=NICHT_ZU_STARK)
+    assert (moment.mitgerissen, moment.umgang, moment.heilsamkeit_danach) == ((), {}, 0.0)
+
+
+def test_ein_negativer_impuls_allein_verschiebt_die_haltung_nicht():
+    geist = geist_mit(erfahrungen=NICHT_ZU_STARK, sog=True, haltungsschritt=0.2)
+    geist.unterbewusstsein.umgangsbilanz["Unruhe"] = -8
+    moment = geist.schritt()
+
+    assert impuls(moment, "Unruhe").faerbung < -0.9
+    assert moment.heilsamkeit_danach == 0.0
+
+
+def test_wer_selbst_engaged_oder_disengaged_wird_nicht_mitgerissen():
+    for umgang in (Umgang.ENGAGE, Umgang.DISENGAGE, Umgang.ABNEIGUNG):
+        moment = mitgerissen(immer(umgang, "Unruhe"))
+        assert moment.mitgerissen == ()
+        assert moment.umgang == {"Unruhe": umgang}
+
+
+def test_weder_noch_und_themenwechsel_bewahren_nicht_davor():
+    for entscheidung in (
+        Entscheidung({"Unruhe": Umgang.WEDER_NOCH}),
+        Entscheidung(themenwechsel="Neuland"),
+    ):
+        assert mitgerissen(lambda lage: entscheidung).mitgerissen == ("Unruhe",)
+
+
+def test_zu_stark_ist_was_allein_die_kapazitaet_der_mbi_fuellt():
+    assert mitgerissen(kapazitaet=1.0).mitgerissen == ("Unruhe",)
+    assert mitgerissen(kapazitaet=2.0).mitgerissen == ()
+
+
+def test_mitgerissen_werden_verstaerkt_das_thema_und_macht_es_negativ():
+    geist = geist_mit(erfahrungen=ZU_STARK, sog=True)
+    geist.schritt()
+    neu = geist.unterbewusstsein.erfahrungen[-1]
+
+    assert (neu.thema, neu.staerke) == ("Unruhe", 0.4)
+    assert geist.unterbewusstsein.faerbung("Unruhe") == -0.5
+    assert geist.unterbewusstsein.gewohnheit == {"Unruhe": 1}
