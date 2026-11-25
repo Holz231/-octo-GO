@@ -55,7 +55,9 @@ Themengebiete selbst sind weder das eine noch das andere. Unheilsam wird die
 Haltung, wenn die MBI aus Verlangen engaged oder aus Abneigung disengaged, also
 auf das reagiert, was aus dem AUI in der ABI auftaucht. Aus Verlangen reagiert
 sie, wenn etwas aus dem AUI in der ABI zu stark wird, sodass sie sich darauf
-richtet. Ein negativer Impuls allein verschiebt die Haltung noch nicht. Heilsam wird sie durch
+richtet. Ein negativer Impuls allein verschiebt die Haltung noch nicht. Je
+unheilsamer, also leidvoller, der Gesamtzustand ist, desto schwerer ist es für
+die MBI, sich nicht beeinflussen zu lassen. Heilsam wird sie durch
 engage und disengage ohne Verlangen und Abneigung und durch autonomes
 Ausrichten. Je unheilsamer die Haltung, desto mehr negative Impulse erzeugt das
 AUI und desto seltener heilsame. Je heilsamer, desto weniger Impulse insgesamt
@@ -541,18 +543,32 @@ class ManuelleBewussteIntention:
         gebiet: str,
         haltungsschritt: float = 0.2,
         sog: float | None = 1.0,
+        anfaelligkeit: float = 0.5,
     ):
         self.entscheider = entscheider
         self.gebiete = [gebiet]
         # Ab welcher Stärke etwas in der ABI zu stark ist, sodass die MBI sich
-        # aus Verlangen darauf richtet. None schaltet das ab.
+        # aus Verlangen darauf richtet, wenn ihre Haltung in der Mitte liegt.
+        # None schaltet das ab.
         self.sog = sog
+        # ANNAHME: Um welchen Anteil diese Stärke bei ganz unheilsamer Haltung
+        # sinkt und bei ganz heilsamer steigt.
+        self.anfaelligkeit = anfaelligkeit
         # Worauf sie sich im letzten Moment deshalb gerichtet hat.
         self.mitgerissen: list[str] = []
         # Wo die Haltung zwischen unheilsam (-1) und heilsam (+1) liegt.
         self.heilsamkeit = 0.0
         # ANNAHME: Jede Handlung der MBI verschiebt die Haltung um diesen Betrag.
         self.haltungsschritt = haltungsschritt
+
+    def sogschwelle(self, heilsamkeit: float) -> float | None:
+        """Ab welcher Stärke die MBI bei dieser Haltung mitgerissen wird."""
+        # Je unheilsamer der Zustand, desto weniger reicht aus. In heilsamer
+        # Haltung liegt die Schwelle über der vollen Stärke: Dann kann die MBI
+        # auch etwas sehr Starkes da sein lassen.
+        if self.sog is None:
+            return None
+        return self.sog * (1 + self.anfaelligkeit * heilsamkeit)
 
     def _verschiebe(self, richtung: int) -> None:
         verschoben = self.heilsamkeit + richtung * self.haltungsschritt
@@ -574,13 +590,15 @@ class ManuelleBewussteIntention:
         umgang = {t: h for t, h in entscheidung.umgang.items() if t in im_feld}
 
         # Wird etwas in der ABI zu stark, richtet sich die MBI aus Verlangen darauf.
-        # ANNAHME: Davor bewahrt nur, im selben Moment selbst zu engagen oder
-        # zu disengagen. Weder noch und ein Themenwechsel reichen nicht.
+        # ANNAHME: Ist etwas zu stark, bewahrt davor nur, im selben Moment selbst
+        # zu engagen oder zu disengagen. Weder noch und ein Themenwechsel
+        # reichen dann nicht.
         self.mitgerissen = []
-        if self.sog is not None:
+        schwelle = self.sogschwelle(lage.heilsamkeit)
+        if schwelle is not None:
             for impuls in lage.abi_feld:
                 gewaehlt = umgang.get(impuls.thema, Umgang.WEDER_NOCH)
-                if impuls.staerke >= self.sog and gewaehlt is Umgang.WEDER_NOCH:
+                if impuls.staerke >= schwelle and gewaehlt is Umgang.WEDER_NOCH:
                     umgang[impuls.thema] = Umgang.VERLANGEN
                     self.mitgerissen.append(impuls.thema)
 

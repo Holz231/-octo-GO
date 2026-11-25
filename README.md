@@ -118,6 +118,8 @@ Festgelegt:
     geschieht erst, wenn die MBI aus Verlangen reagiert. Dazu kommt es, wenn
     etwas aus dem AUI in der ABI zu stark wird, sodass die MBI sich darauf
     richtet.
+21. Je unheilsamer, also leidvoller, der Gesamtzustand ist, desto schwerer
+    oder unwahrscheinlicher ist es, dass die MBI sich nicht beeinflussen lässt.
 
 ## 3. Vorläufige Annahmen im Programm
 
@@ -165,11 +167,20 @@ Zum Spektrum von heilsam zu unheilsam:
 - **Wie negativ oder heilsam ein Thema ist,** wächst mit jedem Umgang in
   dieselbe Richtung, nach einem Mal auf die Hälfte, nach zweien auf drei
   Viertel. Umgang in die andere Richtung hebt es wieder auf.
-- **Wann etwas zu stark ist:** wenn es allein die Kapazität der MBI füllt,
-  also bei voller Stärke. Dann richtet sich die MBI aus Verlangen darauf, als
-  hätte sie selbst so entschieden.
-- **Was davor bewahrt:** nur, im selben Moment selbst zu dem Thema zu engagen
-  oder zu disengagen. Weder noch und ein Themenwechsel reichen nicht.
+- **Wann etwas zu stark ist:** In der Mitte zwischen heilsam und unheilsam,
+  wenn es allein die Kapazität der MBI füllt, also bei voller Stärke. Dann
+  richtet sich die MBI aus Verlangen darauf, als hätte sie selbst so
+  entschieden.
+- **Wie der Gesamtzustand das verschiebt:** Der Gesamtzustand ist die Haltung
+  der MBI. Bei ganz unheilsamer Haltung reicht schon die halbe Stärke. In
+  heilsamer Haltung liegt die Schwelle über der vollen Stärke: Dann wird die
+  MBI nie mitgerissen und kann auch sehr Starkes da sein lassen.
+- **Schwerer, nicht unwahrscheinlicher:** Das Programm setzt eine feste
+  Schwelle, keinen Zufall. Wer bei gleicher Haltung und Stärke einmal
+  mitgerissen wird, wird es immer.
+- **Was davor bewahrt, wenn etwas zu stark ist:** nur, im selben Moment selbst
+  zu dem Thema zu engagen oder zu disengagen. Weder noch und ein Themenwechsel
+  reichen dann nicht.
 - **Es ist immer Verlangen.** Dass die MBI von etwas zu Starkem aus Abneigung
   weggerissen wird, gibt es im Programm nicht.
 - **In den Demo-Läufen** außer `sog` ist das abgeschaltet.

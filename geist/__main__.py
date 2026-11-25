@@ -377,7 +377,9 @@ def demo_sog() -> None:
     negativ, und sie bleibt auf voller Stärke. Ab Moment 6 disengaged die MBI
     selbst, ohne Abneigung. Das bewahrt sie davor, mitgerissen zu werden. Die
     Haltung wird Schritt für Schritt wieder heilsamer, und einige Momente
-    später geht auch die Unruhe zurück.
+    später geht auch die Unruhe zurück. Je unheilsamer die Haltung ist, desto
+    weniger Stärke reicht aus, um die MBI mitzureißen. In heilsamer Haltung
+    kann sie auch etwas sehr Starkes da sein lassen.
     """
 
     def entscheider(lage: Lage) -> Entscheidung:
@@ -494,8 +496,10 @@ def interaktiv() -> None:
     print("   'v Thema'  engage aus Verlangen, 'a Thema' disengage aus Abneigung:")
     print("              Sie wirken auf das Thema wie engage und disengage, machen")
     print("              deine Haltung aber unheilsamer und das Thema negativ.")
-    print("   Wird etwas im ABI-Feld zu stark (1.00), richtest du dich von selbst aus")
-    print("   Verlangen darauf, außer du engagest oder disengagest es in dem Moment.")
+    print("   Wird etwas im ABI-Feld zu stark, richtest du dich von selbst aus Verlangen")
+    print("   darauf, außer du engagest oder disengagest es in dem Moment. Je")
+    print("   unheilsamer deine Haltung, desto weniger Stärke reicht dafür aus. In")
+    print("   heilsamer Haltung kannst du auch sehr Starkes da sein lassen.")
     print("   'g Gebiet' Themenwechsel, ohne etwas zu verstärken: in ein beliebiges")
     print("              Themengebiet, 'sinne', 'jetzt' (die jetzige Erfahrung),")
     print("              'erinnerung', 'emotion' oder 'körper'. Das macht deine Haltung")

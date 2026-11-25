@@ -1135,6 +1135,29 @@ def test_weder_noch_und_themenwechsel_bewahren_nicht_davor():
         assert mitgerissen(lambda lage: entscheidung).mitgerissen == ("Unruhe",)
 
 
+def mitgerissen_bei(heilsamkeit, staerke_der_unruhe, entscheider=nichts):
+    geist = geist_mit(entscheider, erfahrungen=[erfahrung("Unruhe", staerke_der_unruhe)], sog=True)
+    geist.manuell.heilsamkeit = heilsamkeit
+    # Die Haltung soll hier nur die Schwelle verschieben, nicht die Impulse.
+    geist.unterbewusstsein.ruhe = 0.0
+    return bool(geist.schritt().mitgerissen)
+
+
+def test_je_unheilsamer_der_zustand_desto_weniger_reicht_um_mitgerissen_zu_werden():
+    assert not mitgerissen_bei(heilsamkeit=0.0, staerke_der_unruhe=0.9)
+    assert mitgerissen_bei(heilsamkeit=-0.4, staerke_der_unruhe=0.9)
+    assert mitgerissen_bei(heilsamkeit=-1.0, staerke_der_unruhe=0.5)
+    assert not mitgerissen_bei(heilsamkeit=-1.0, staerke_der_unruhe=0.45)
+
+
+def test_in_heilsamer_haltung_kann_die_mbi_auch_sehr_starkes_da_sein_lassen():
+    weder_noch = immer(Umgang.WEDER_NOCH, "Unruhe")
+
+    assert mitgerissen_bei(heilsamkeit=0.0, staerke_der_unruhe=1.0, entscheider=weder_noch)
+    assert not mitgerissen_bei(heilsamkeit=0.2, staerke_der_unruhe=1.0, entscheider=weder_noch)
+    assert not mitgerissen_bei(heilsamkeit=1.0, staerke_der_unruhe=1.0)
+
+
 def test_zu_stark_ist_was_allein_die_kapazitaet_der_mbi_fuellt():
     assert mitgerissen(kapazitaet=1.0).mitgerissen == ("Unruhe",)
     assert mitgerissen(kapazitaet=2.0).mitgerissen == ()
