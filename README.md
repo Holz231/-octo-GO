@@ -123,7 +123,8 @@ Festgelegt:
     oder unwahrscheinlicher ist es, dass die MBI sich nicht beeinflussen lässt.
 22. Es gibt auch eine Zufälligkeitsvariable: eine Wahrscheinlichkeit, auch im
     AUI, die je nach Stärke des Gesamtzustands von heilsam zu unheilsam jeweils
-    erhöht ist.
+    erhöht ist. Selbst in den Extremen gibt es noch eine Chance für
+    gegensätzliche Impulse aus dem AUI.
 
 ## 3. Vorläufige Annahmen im Programm
 
@@ -194,9 +195,10 @@ Zum Zufall im AUI:
   kennt, von selbst wieder aufkommen. In der Mitte zwischen heilsam und
   unheilsam liegt die Wahrscheinlichkeit dafür bei 5 % je Thema und Moment.
 - **Wie der Gesamtzustand sie verschiebt:** Bei ganz unheilsamer Haltung kommt
-  ein ganz negatives Thema viermal so oft auf und ein ganz heilsames gar nicht.
-  Bei ganz heilsamer Haltung kommt ein heilsames doppelt so oft auf, ein
-  neutrales halb so oft und ein negatives gar nicht.
+  ein ganz negatives Thema viermal so oft auf und ein ganz heilsames ein
+  Viertel so oft. Bei ganz heilsamer Haltung kommt ein heilsames doppelt so
+  oft auf, ein neutrales halb so oft und ein negatives ein Achtel so oft. Auf
+  null fällt die Wahrscheinlichkeit nie.
 - **Was aufkommt, ist eine neue Erfahrung** mittlerer Stärke (0,3) in dem
   Gebiet, in dem das Thema am stärksten erlebt wurde. Sie klingt ab wie jede
   andere und zählt wie jede andere.

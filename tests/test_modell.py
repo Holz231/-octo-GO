@@ -1208,7 +1208,7 @@ def test_mitgerissen_werden_verstaerkt_das_thema_und_macht_es_negativ():
 
 
 def aui_mit_drei_themen(**kwargs):
-    unterbewusstsein = aui(spontan=0.1, zufallshebel=3.0, ruhe=0.5, **kwargs)
+    unterbewusstsein = aui(spontan=0.1, zufallshebel=4.0, ruhe=0.5, **kwargs)
     for thema, bilanz in (("Negativ", -8), ("Neutral", 0), ("Heilsam", 8)):
         unterbewusstsein.erlebe(erfahrung(thema, 0.4, "Familie"))
         unterbewusstsein.umgangsbilanz[thema] = bilanz
@@ -1217,7 +1217,7 @@ def aui_mit_drei_themen(**kwargs):
 
 def chancen_bei(heilsamkeit):
     chance = aui_mit_drei_themen().aufkommenschance
-    return tuple(round(chance(thema, heilsamkeit), 2) for thema in ("Negativ", "Neutral", "Heilsam"))
+    return tuple(round(chance(thema, heilsamkeit), 3) for thema in ("Negativ", "Neutral", "Heilsam"))
 
 
 def test_in_der_mitte_kommt_alles_gleich_wahrscheinlich_von_selbst_auf():
@@ -1225,15 +1225,26 @@ def test_in_der_mitte_kommt_alles_gleich_wahrscheinlich_von_selbst_auf():
 
 
 def test_je_unheilsamer_desto_oefter_negatives_und_desto_seltener_heilsames():
-    assert chancen_bei(-1.0) == (0.4, 0.1, 0.0)
-    assert chancen_bei(-0.5)[0] < chancen_bei(-1.0)[0]
+    negativ, neutral, heilsam = chancen_bei(-1.0)
+
+    # Negatives rund viermal so oft wie in der Mitte, Heilsames ein Viertel so oft.
+    assert (negativ, neutral, heilsam) == (0.398, 0.1, 0.025)
+    assert chancen_bei(-0.5)[0] < negativ
 
 
 def test_je_heilsamer_desto_weniger_insgesamt_und_desto_eher_heilsames():
     negativ, neutral, heilsam = chancen_bei(1.0)
 
-    assert (negativ, neutral, heilsam) == (0.0, 0.05, 0.2)
+    assert (negativ, neutral, heilsam) == (0.013, 0.05, 0.199)
     assert sum((negativ, neutral, heilsam)) < sum(chancen_bei(-1.0))
+
+
+def test_selbst_in_den_extremen_bleibt_eine_chance_fuer_gegensaetzliche_impulse():
+    heilsames_im_unheilsamen = chancen_bei(-1.0)[2]
+    negatives_im_heilsamen = chancen_bei(1.0)[0]
+
+    assert heilsames_im_unheilsamen > 0
+    assert negatives_im_heilsamen > 0
 
 
 def test_was_aufkommt_ist_eine_neue_erfahrung_im_gebiet_des_themas():

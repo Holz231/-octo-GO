@@ -66,7 +66,8 @@ der MBI mit seinem Thema.
 
 Es gibt außerdem den Zufall. Ob im AUI etwas von selbst aufkommt und ob die
 MBI mitgerissen wird, ist eine Wahrscheinlichkeit, und sie steigt oder sinkt
-mit dem Gesamtzustand zwischen heilsam und unheilsam.
+mit dem Gesamtzustand zwischen heilsam und unheilsam. Selbst in den Extremen
+bleibt eine Chance für gegensätzliche Impulse aus dem AUI.
 
 Gewohnheit entsteht durch Wiederholung: Je öfter die MBI zu einem Thema
 engaged, desto langsamer verblasst es im AUI. Engage und disengage geschehen
@@ -236,7 +237,7 @@ class Unterbewusstsein:
         ruhe: float = 0.5,
         spontan: float = 0.05,
         spontanstaerke: float = 0.3,
-        zufallshebel: float = 3.0,
+        zufallshebel: float = 4.0,
         zufall: random.Random | None = None,
     ):
         # ANNAHME: Mit dieser Wahrscheinlichkeit pro Moment kommt ein Thema,
@@ -246,8 +247,9 @@ class Unterbewusstsein:
         # ANNAHME: Wie stark etwas ist, das von selbst aufkommt.
         self.spontanstaerke = spontanstaerke
         # ANNAHME: Wie stark der Gesamtzustand diese Wahrscheinlichkeit
-        # verschiebt. Bei 3 kommt ein ganz negatives Thema in ganz unheilsamer
-        # Haltung viermal so oft auf, ein ganz heilsames dann gar nicht.
+        # verschiebt. Bei 4 kommt ein ganz negatives Thema in ganz unheilsamer
+        # Haltung viermal so oft auf und ein ganz heilsames nur ein Viertel so
+        # oft. Auf null fällt die Wahrscheinlichkeit nie.
         self.zufallshebel = zufallshebel
         self.zufall = zufall or random.Random()
         # ANNAHME: Eine Erfahrung wirkt pro Moment um diesen Faktor schwächer nach.
@@ -320,8 +322,9 @@ class Unterbewusstsein:
         """Mit welcher Wahrscheinlichkeit ein Thema in diesem Moment von selbst aufkommt."""
         # Je unheilsamer der Gesamtzustand, desto öfter Negatives und desto
         # seltener Heilsames. Je heilsamer, desto öfter Heilsames, desto
-        # seltener Negatives und desto weniger insgesamt.
-        chance = self.spontan * max(0.0, 1 + self.zufallshebel * heilsamkeit * self.faerbung(thema))
+        # seltener Negatives und desto weniger insgesamt. Auch im Extrem bleibt
+        # für das Gegensätzliche eine Chance.
+        chance = self.spontan * self.zufallshebel ** (heilsamkeit * self.faerbung(thema))
         if heilsamkeit > 0:
             chance *= 1 - self.ruhe * heilsamkeit
         return min(1.0, chance)
