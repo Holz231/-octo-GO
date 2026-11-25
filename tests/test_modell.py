@@ -1,4 +1,5 @@
 from geist import (
+    ERINNERUNG,
     JETZIGE_ERFAHRUNG,
     SINNE,
     Entscheidung,
@@ -435,13 +436,10 @@ def test_was_aus_dem_abi_feld_verschwindet_zaehlt_nicht_mehr_voll():
     assert verlauf == [0.5, 0.25, 0.125, 0.03125]
 
 
-# --- Erinnerungen: was nur im AUI liegt, erreicht die MBI nicht per Haltung ---
+# --- Die Erinnerung als Gebiet: so aktiviert die MBI, was nur im AUI liegt ---
 
 VERBLASSTER_STREIT = (erfahrung("Streit", 0.9, "Familie", zeit=-10),)
-
-
-def erinnere(thema):
-    return Entscheidung(erinnerungen=(thema,))
+IN_DIE_ERINNERUNG = Entscheidung(themenwechsel=ERINNERUNG)
 
 
 def test_zu_dem_was_nur_im_aui_liegt_gibt_es_keine_haltung():
@@ -453,43 +451,44 @@ def test_zu_dem_was_nur_im_aui_liegt_gibt_es_keine_haltung():
     assert moment.haltungen == {}
 
 
-def test_aktivierte_erinnerung_taucht_einen_moment_spaeter_in_der_abi_auf():
-    geist = geist_mit(nach_plan({0: erinnere("Streit")}), "Familie", VERBLASSTER_STREIT)
-    erster, zweiter = geist.schritt(), geist.schritt()
+def test_in_der_erinnerung_zaehlt_frueheres_unverblasst_egal_aus_welchem_gebiet():
+    unterbewusstsein = Unterbewusstsein()
+    unterbewusstsein.erlebe(VERBLASSTER_STREIT[0])
 
-    assert im_feld(erster) == []
-    assert [(e.thema, e.staerke, e.gebiete) for e in erster.erinnert] == [
-        ("Streit", 0.9, ("Familie",))
-    ]
-    assert im_feld(zweiter) == ["Streit"]
+    (verblasst,) = unterbewusstsein.erzeuge_impulse(0, ["Familie"])
+    (erinnert,) = unterbewusstsein.erzeuge_impulse(0, [ERINNERUNG])
 
-
-def test_erinnerung_aktivieren_ist_kein_engage_und_kein_themenwechsel():
-    geist = geist_mit(nach_plan({0: erinnere("Streit")}), "Arbeit", VERBLASSTER_STREIT)
-    moment = geist.schritt()
-
-    assert moment.haltungen == {}
-    assert moment.gebiete_danach == ("Arbeit",)
+    assert verblasst.staerke < 0.1
+    assert (erinnert.staerke, erinnert.mitgebracht_aus) == (0.9, ())
 
 
-def test_erinnerung_gehoert_zu_ihrem_urspruenglichen_gebiet():
-    geist = geist_mit(
-        nach_plan({0: erinnere("Streit")}), "Arbeit", VERBLASSTER_STREIT, nachklang=1.0
-    )
-    geist.schritt()
-    (streit,) = geist.schritt().aui_feld
+def test_themenwechsel_in_die_erinnerung_laesst_verblasstes_in_der_abi_auftauchen():
+    geist = geist_mit(nach_plan({0: IN_DIE_ERINNERUNG}), "Familie", VERBLASSTER_STREIT)
+    vorher, in_der_erinnerung = geist.schritt(), geist.schritt()
 
-    assert (streit.staerke, streit.mitgebracht_aus) == (0.9, ("Familie",))
-
-
-def test_ohne_fruehere_erfahrung_gibt_es_keine_erinnerung():
-    geist = geist_mit(nach_plan({0: erinnere("Nie erlebt")}))
-    assert geist.schritt().erinnert == ()
-    assert geist.unterbewusstsein.erfahrungen == []
+    assert im_feld(vorher) == []
+    assert in_der_erinnerung.gebiete == (ERINNERUNG,)
+    assert im_feld(in_der_erinnerung) == ["Streit"]
 
 
-def test_nach_der_erinnerung_ist_engage_moeglich():
-    plan = {0: erinnere("Streit"), 1: Entscheidung({"Streit": Haltung.ENGAGE})}
+def test_die_erinnerung_verstaerkt_nichts_im_aui():
+    plan = {0: IN_DIE_ERINNERUNG, 1: Entscheidung(themenwechsel="Familie")}
+    geist = geist_mit(nach_plan(plan), "Familie", VERBLASSTER_STREIT)
+    verlauf = [im_feld(geist.schritt()) for _ in range(3)]
+
+    # Zurück in der Familie ist der Streit so verblasst wie zuvor.
+    assert verlauf == [[], ["Streit"], []]
+    assert len(geist.unterbewusstsein.erfahrungen) == 1
+
+
+def test_was_gerade_erst_erlebt_wird_ist_noch_keine_erinnerung():
+    moment = geist_mit(gebiet=ERINNERUNG).schritt({"Klang": 0.4})
+    (klang,) = moment.aui_feld
+    assert (klang.staerke, klang.mitgebracht_aus) == (0.2, (SINNE,))
+
+
+def test_in_der_erinnerung_ist_engage_moeglich():
+    plan = {0: IN_DIE_ERINNERUNG, 1: Entscheidung({"Streit": Haltung.ENGAGE})}
     geist = geist_mit(nach_plan(plan), "Arbeit", VERBLASSTER_STREIT)
     geist.schritt()
     moment = geist.schritt()

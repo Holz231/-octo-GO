@@ -3,7 +3,7 @@
     python -m geist                  interaktiv: du bist die MBI
     python -m geist --demo           die drei Haltungen im Vergleich
     python -m geist --demo gebiete   wie das AUI Themen in neue Gebiete mitführt
-    python -m geist --demo erinnerung  wie die MBI eine Erinnerung aktiviert
+    python -m geist --demo erinnerung  wie die MBI in die Erinnerung wechselt
 
 Mit --mehrere hält die MBI mehrere Gebiete zugleich statt nur eines.
 """
@@ -14,6 +14,7 @@ import argparse
 import random
 
 from .modell import (
+    ERINNERUNG,
     JETZIGE_ERFAHRUNG,
     SINNE,
     Entscheidung,
@@ -30,12 +31,13 @@ BESONDERE_GEBIETE = {
     "sinne": SINNE,
     "jetzt": JETZIGE_ERFAHRUNG,
     "jetzige erfahrung": JETZIGE_ERFAHRUNG,
+    "erinnerung": ERINNERUNG,
 }
 
 
 def benenne(gebiete: tuple[str, ...]) -> str:
     namen = [
-        g if g in (SINNE, JETZIGE_ERFAHRUNG) else f"Themengebiet {g}" for g in gebiete
+        g if g in (SINNE, JETZIGE_ERFAHRUNG, ERINNERUNG) else f"Themengebiet {g}" for g in gebiete
     ]
     return " + ".join(namen)
 
@@ -80,11 +82,6 @@ def zeige(moment: Moment, schwelle: float) -> None:
     else:
         print("  (nichts)")
 
-    for erinnerung in moment.erinnert:
-        print(
-            f"  → Die MBI aktiviert eine Erinnerung: {erinnerung.thema}"
-            f" ({erinnerung.staerke:.2f}, aus: {benenne(erinnerung.gebiete)})"
-        )
     if moment.gebiete_danach != moment.gebiete:
         print(f"  → Die MBI agiert ab jetzt in: {benenne(moment.gebiete_danach)}")
     for gebiet in moment.gebiete_ohne_mbi_danach:
@@ -152,17 +149,19 @@ def demo_gebiete(mehrere: bool) -> None:
 
 
 def demo_erinnerung(mehrere: bool) -> None:
-    """Die MBI holt etwas Verblasstes über eine Erinnerung zurück.
+    """Die MBI holt etwas Verblasstes zurück, indem sie in die Erinnerung wechselt.
 
     Der Streit liegt lange zurück und ist im AUI fast verklungen. Er taucht
     nicht im Feld der ABI auf, also kann die MBI nicht zu ihm engagen. Sie kann
-    aber die Erinnerung aktivieren. Einen Moment später taucht der Streit in
-    der ABI auf, und erst jetzt ist engage möglich. Themengebiete ohne die MBI
+    aber ihr Thema in die Erinnerung wechseln. Dort zählt Früheres unverblasst,
+    der Streit taucht in der ABI auf, und erst jetzt ist engage möglich: Der
+    Streit wird ein eigenes Themengebiet der MBI. Themengebiete ohne die MBI
     sind hier abgeschaltet.
     """
     ablauf = {
-        1: Entscheidung(erinnerungen=("Streit",)),
-        3: Entscheidung({"Streit": Haltung.ENGAGE}),
+        0: Entscheidung(themenwechsel=ERINNERUNG),
+        1: Entscheidung({"Streit": Haltung.ENGAGE}),
+        2: Entscheidung({"Streit": Haltung.ENGAGE}),
     }
     geist = Geist(
         lambda lage: ablauf.get(geist.zeit, Entscheidung()),
@@ -171,7 +170,7 @@ def demo_erinnerung(mehrere: bool) -> None:
         chance=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Streit", 0.9, -10, ("Familie",)))
-    for _ in range(5):
+    for _ in range(4):
         zeige(geist.schritt(), geist.automatisch.schwelle)
 
 
@@ -188,24 +187,21 @@ def lies_gebiet(text: str) -> str:
 
 
 def lies_entscheidung(text: str) -> Entscheidung:
-    """'e Sorge, d Musik, g sinne, r Streit' -> Haltungen, Themenwechsel, Erinnerung"""
+    """'e Sorge, d Musik, g sinne' -> Haltungen zu Sorge und Musik, Wechsel in die Sinne"""
     haltungen: dict[str, Haltung] = {}
-    erinnerungen: list[str] = []
     gebiet = None
     for teil in text.split(","):
         if not teil.strip():
             continue
         taste, _, name = teil.strip().partition(" ")
         taste, name = taste.lower(), name.strip()
-        if not name or taste not in {*TASTEN, "g", "r"}:
+        if not name or taste not in {*TASTEN, "g"}:
             raise ValueError(teil.strip())
         if taste == "g":
             gebiet = lies_gebiet(name)
-        elif taste == "r":
-            erinnerungen.append(name)
         else:
             haltungen[name] = TASTEN[taste]
-    return Entscheidung(haltungen, gebiet, tuple(erinnerungen))
+    return Entscheidung(haltungen, gebiet)
 
 
 def frage_entscheidung(lage: Lage) -> Entscheidung:
@@ -228,8 +224,7 @@ def frage_entscheidung(lage: Lage) -> Entscheidung:
         if not fremd:
             return entscheidung
         print(f"  Nicht im ABI-Feld: {', '.join(fremd)}. Engage und disengage gibt es")
-        print("  nur zu dem, was dort auftaucht. Themenwechsel: g Gebiet. Erinnerung")
-        print("  aktivieren: r Thema")
+        print("  nur zu dem, was dort auftaucht. Für einen Themenwechsel: g Gebiet")
 
 
 def lies_sinne(text: str) -> dict[str, float]:
@@ -257,22 +252,15 @@ def interaktiv(mehrere: bool) -> None:
     print("   'd Thema'  disengage: schwächt das Thema, es ist kein Gebiet von dir mehr.")
     print("              Beides geht nur zu Themen, die im ABI-Feld auftauchen.")
     print("   'g Gebiet' Themenwechsel, ohne etwas zu verstärken: in ein beliebiges")
-    print("              Themengebiet, 'sinne' oder 'jetzt' (die jetzige Erfahrung).")
-    print("   'r Thema'  aktiviert die Erinnerung an ein Thema, das du früher erlebt")
-    print("              hast. Einen Moment später kann es im ABI-Feld auftauchen.")
+    print("              Themengebiet, 'sinne', 'jetzt' (die jetzige Erfahrung) oder")
+    print("              'erinnerung'.")
     print("   Leer = Themenerhalt und weder noch: Dann kann ein Thema im ABI-Feld")
     print("   von selbst zum Themengebiet werden.")
     try:
         gebiet = ""
         while not gebiet:
             gebiet = lies_gebiet(input("\nIn welchem Gebiet agierst du? "))
-        gefragt: list[Entscheidung] = []
-
-        def entscheider(lage: Lage) -> Entscheidung:
-            gefragt.append(frage_entscheidung(lage))
-            return gefragt[-1]
-
-        geist = Geist(entscheider, gebiet, mehrere=mehrere)
+        geist = Geist(frage_entscheidung, gebiet, mehrere=mehrere)
         while True:
             eingabe = input("\nWas nehmen deine Sinne wahr? ")
             if eingabe.strip().lower() == "q":
@@ -282,12 +270,7 @@ def interaktiv(mehrere: bool) -> None:
             except ValueError:
                 print("  Stärke muss eine Zahl sein, zum Beispiel Atem=0.1")
                 continue
-            moment = geist.schritt(sinne)
-            zeige(moment, geist.automatisch.schwelle)
-            erinnert = {erinnerung.thema for erinnerung in moment.erinnert}
-            for thema in gefragt[-1].erinnerungen:
-                if thema not in erinnert:
-                    print(f"  → Keine Erinnerung an: {thema}")
+            zeige(geist.schritt(sinne), geist.automatisch.schwelle)
     except EOFError:
         pass
 

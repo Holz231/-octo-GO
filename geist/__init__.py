@@ -1,4 +1,5 @@
 from .modell import (
+    ERINNERUNG,
     JETZIGE_ERFAHRUNG,
     SINNE,
     AutomatischeBewussteIntention,
@@ -14,6 +15,7 @@ from .modell import (
 )
 
 __all__ = [
+    "ERINNERUNG",
     "JETZIGE_ERFAHRUNG",
     "SINNE",
     "AutomatischeBewussteIntention",
