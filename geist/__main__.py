@@ -10,6 +10,7 @@
     python -m geist --demo einfluss    wie ein Gebiet durch Erfahrung an Einfluss gewinnt
     python -m geist --demo heilsam     wie Abneigung die Haltung unheilsam macht
     python -m geist --demo sog         wie etwas zu Starkes die MBI mitreißt
+    python -m geist --demo zufall      wie der Gesamtzustand die Wahrscheinlichkeiten verschiebt
 
 Ein Thema mit Gewohnheit trägt in der Anzeige die Marke ↻ und die Zahl, wie
 oft die MBI dazu engaged hat, abzüglich der Male, die sie disengaged hat.
@@ -133,6 +134,8 @@ def zeige(moment: Moment, schwelle: float) -> None:
     else:
         print("  (nichts)")
 
+    if moment.aufgekommen:
+        print(f"  → Im AUI von selbst aufgekommen: {', '.join(moment.aufgekommen)}")
     for thema in moment.mitgerissen:
         print(f"  → Zu stark: Die MBI richtet sich aus Verlangen auf {thema}")
     if moment.heilsamkeit_danach != moment.heilsamkeit:
@@ -173,7 +176,7 @@ def demo_umgang() -> None:
         return Entscheidung(umgang)
 
     # Fester Zufall, damit der Ablauf jedes Mal gleich ist.
-    geist = Geist(entscheider, "Arbeit", zufall=random.Random(7), mitnahme=0.5, haltungsschritt=0.0, sog=False)
+    geist = Geist(entscheider, "Arbeit", zufall=random.Random(7), mitnahme=0.5, haltungsschritt=0.0, sog=False, spontan=0.0)
     for thema in ("Sorge", "Hunger", "Ohrwurm"):
         geist.unterbewusstsein.erlebe(Erfahrung(thema, 1.0, 0, ("Zuhause",)))
     for _ in range(7):
@@ -202,6 +205,7 @@ def demo_gebiete() -> None:
         mitnahme=0.5,
         haltungsschritt=0.0,
         sog=False,
+        spontan=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 1.0, 0, ("Familie",)))
     for _ in range(5):
@@ -232,6 +236,7 @@ def demo_erinnerung() -> None:
         mitnahme=0.5,
         haltungsschritt=0.0,
         sog=False,
+        spontan=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Streit", 0.9, -10, ("Familie",)))
     for _ in range(4):
@@ -264,6 +269,7 @@ def demo_haltung() -> None:
         mitnahme=0.5,
         haltungsschritt=0.0,
         sog=False,
+        spontan=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 1.0, 0, ("Familie",)))
     for _ in range(5):
@@ -283,7 +289,7 @@ def demo_gewohnheit() -> None:
     def entscheider(lage: Lage) -> Entscheidung:
         return Entscheidung({"Grübeln": Umgang.ENGAGE} if geist.zeit < 3 else {})
 
-    geist = Geist(entscheider, "Abend", chance=0.0, kapazitaet=3.0, mitnahme=0.5, haltungsschritt=0.0, sog=False)
+    geist = Geist(entscheider, "Abend", chance=0.0, kapazitaet=3.0, mitnahme=0.5, haltungsschritt=0.0, sog=False, spontan=0.0)
     for thema in ("Grübeln", "Ohrwurm"):
         geist.unterbewusstsein.erlebe(Erfahrung(thema, 0.8, 0, ("Abend",)))
     for _ in range(9):
@@ -302,7 +308,7 @@ def demo_emotion() -> None:
     """
     sinne = {0: {"Streit": 0.9}, 6: {"Streit": 0.9}}
     emotion = {0: {"Wut": 0.7}}
-    geist = Geist(lambda lage: Entscheidung(), SINNE, chance=0.0, mitnahme=0.5, haltungsschritt=0.0, sog=False)
+    geist = Geist(lambda lage: Entscheidung(), SINNE, chance=0.0, mitnahme=0.5, haltungsschritt=0.0, sog=False, spontan=0.0)
     for zeit in range(8):
         moment = geist.schritt(sinne.get(zeit), emotion.get(zeit))
         zeige(moment, geist.automatisch.schwelle)
@@ -327,6 +333,7 @@ def demo_einfluss() -> None:
         chance=0.0,
         haltungsschritt=0.0,
         sog=False,
+        spontan=0.0,
     )
     geist.unterbewusstsein.erlebe(Erfahrung("Sorge", 0.9, 0, ("Familie",)))
     geist.unterbewusstsein.erlebe(Erfahrung("Malen", 0.5, 0, ("Hobby",)))
@@ -350,7 +357,7 @@ def demo_heilsam() -> None:
             taucht_auf = any(impuls.thema == "Unruhe" for impuls in lage.abi_feld)
             return Entscheidung({"Unruhe": umgang} if taucht_auf else {})
 
-        geist = Geist(entscheider, EMOTION, chance=0.0, mitnahme=0.5, sog=False)
+        geist = Geist(entscheider, EMOTION, chance=0.0, mitnahme=0.5, sog=False, spontan=0.0)
         verlauf = []
         for _ in range(9):
             moment = geist.schritt(emotion={"Unruhe": 0.3})
@@ -372,14 +379,14 @@ def demo_sog() -> None:
 
     In jedem Moment kommt neue Unruhe auf. Die MBI ist im Gebiet der Emotion
     und lässt sie zunächst einfach da sein. Die Unruhe sammelt sich an, bis sie
-    allein die Kapazität der MBI füllt. In Moment 4 und 5 richtet sich die MBI
-    deshalb aus Verlangen darauf: Die Haltung wird unheilsam, die Unruhe
-    negativ, und sie bleibt auf voller Stärke. Ab Moment 6 disengaged die MBI
-    selbst, ohne Abneigung. Das bewahrt sie davor, mitgerissen zu werden. Die
-    Haltung wird Schritt für Schritt wieder heilsamer, und einige Momente
-    später geht auch die Unruhe zurück. Je unheilsamer die Haltung ist, desto
-    weniger Stärke reicht aus, um die MBI mitzureißen. In heilsamer Haltung
-    kann sie auch etwas sehr Starkes da sein lassen.
+    fast die Kapazität der MBI füllt. Je stärker sie ist, desto wahrscheinlicher
+    reißt sie die MBI mit. In diesem Lauf geschieht das in Moment 3, 4 und 5:
+    Die MBI richtet sich aus Verlangen darauf, die Haltung wird unheilsam, die
+    Unruhe negativ, und sie bleibt auf voller Stärke. Mit jeder Stufe
+    unheilsamer reicht dafür weniger Stärke aus. Ab Moment 6 disengaged die MBI
+    selbst, ohne Abneigung. Das bewahrt sie sicher davor, mitgerissen zu
+    werden. Die Haltung wird Schritt für Schritt wieder heilsamer, und einige
+    Momente später geht auch die Unruhe zurück.
     """
 
     def entscheider(lage: Lage) -> Entscheidung:
@@ -388,12 +395,48 @@ def demo_sog() -> None:
             return Entscheidung({"Unruhe": Umgang.DISENGAGE})
         return Entscheidung()
 
-    geist = Geist(entscheider, EMOTION, chance=0.0, mitnahme=0.5)
+    # Fester Zufall, damit der Ablauf jedes Mal gleich ist.
+    geist = Geist(
+        entscheider, EMOTION, chance=0.0, mitnahme=0.5, spontan=0.0, zufall=random.Random(1)
+    )
     for _ in range(14):
         zeige(geist.schritt(emotion={"Unruhe": 0.3}), geist.automatisch.schwelle)
 
 
+def demo_zufall() -> None:
+    """Der Gesamtzustand verschiebt, was der Zufall bringt.
+
+    Oben: Das AUI kennt drei Themen, eines ganz negativ, eines neutral, eines
+    ganz heilsam. Gezählt wird, wie oft jedes in 10 000 Momenten von selbst
+    aufkommt, je nach Haltung der MBI. Unten: mit welcher Wahrscheinlichkeit
+    etwas in der ABI die MBI mitreißt, je nach seiner Stärke und ihrer Haltung.
+    """
+    haltungen = (-1.0, -0.5, 0.0, 0.5, 1.0)
+    themen = {"negativ": -8, "neutral": 0, "heilsam": 8}
+
+    zufall = random.Random(1)
+    aui = Geist(lambda lage: Entscheidung(), "Alltag").unterbewusstsein
+    aui.umgangsbilanz.update(themen)
+    print("\nWie oft ein Thema in 10 000 Momenten von selbst im AUI aufkommt:\n")
+    print(f"  {'Haltung der MBI':<30}" + "".join(f"{thema:>10}" for thema in themen))
+    for heilsamkeit in haltungen:
+        zaehler = [
+            sum(zufall.random() < aui.aufkommenschance(thema, heilsamkeit) for _ in range(10_000))
+            for thema in themen
+        ]
+        print(f"  {nenne_haltung(heilsamkeit):<30}" + "".join(f"{n:>10}" for n in zaehler))
+
+    staerken = (0.5, 0.7, 0.8, 0.9, 1.0)
+    mbi = Geist(lambda lage: Entscheidung(), "Alltag").manuell
+    print("\nWie wahrscheinlich etwas in der ABI die MBI mitreißt, je nach seiner Stärke:\n")
+    print(f"  {'Haltung der MBI':<30}" + "".join(f"{staerke:>8.2f}" for staerke in staerken))
+    for heilsamkeit in haltungen:
+        chancen = "".join(f"{mbi.sogchance(staerke, heilsamkeit):>8.0%}" for staerke in staerken)
+        print(f"  {nenne_haltung(heilsamkeit):<30}{chancen}")
+
+
 DEMOS = {
+    "zufall": demo_zufall,
     "sog": demo_sog,
     "heilsam": demo_heilsam,
     "einfluss": demo_einfluss,
@@ -496,10 +539,11 @@ def interaktiv() -> None:
     print("   'v Thema'  engage aus Verlangen, 'a Thema' disengage aus Abneigung:")
     print("              Sie wirken auf das Thema wie engage und disengage, machen")
     print("              deine Haltung aber unheilsamer und das Thema negativ.")
-    print("   Wird etwas im ABI-Feld zu stark, richtest du dich von selbst aus Verlangen")
-    print("   darauf, außer du engagest oder disengagest es in dem Moment. Je")
-    print("   unheilsamer deine Haltung, desto weniger Stärke reicht dafür aus. In")
-    print("   heilsamer Haltung kannst du auch sehr Starkes da sein lassen.")
+    print("   Der Zufall spielt mit: Was das AUI kennt, kann von selbst wieder aufkommen,")
+    print("   und etwas Starkes im ABI-Feld kann dich mitreißen, sodass du dich aus")
+    print("   Verlangen darauf richtest. Sicher bewahrt davor nur, es in dem Moment")
+    print("   selbst zu engagen oder zu disengagen. Je unheilsamer deine Haltung, desto")
+    print("   wahrscheinlicher wirst du mitgerissen und desto öfter kommt Negatives auf.")
     print("   'g Gebiet' Themenwechsel, ohne etwas zu verstärken: in ein beliebiges")
     print("              Themengebiet, 'sinne', 'jetzt' (die jetzige Erfahrung),")
     print("              'erinnerung', 'emotion' oder 'körper'. Das macht deine Haltung")

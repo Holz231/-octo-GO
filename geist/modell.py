@@ -64,6 +64,10 @@ AUI und desto seltener heilsame. Je heilsamer, desto weniger Impulse insgesamt
 und desto eher heilsame. Negativ oder heilsam wird ein Impuls durch den Umgang
 der MBI mit seinem Thema.
 
+Es gibt außerdem den Zufall. Ob im AUI etwas von selbst aufkommt und ob die
+MBI mitgerissen wird, ist eine Wahrscheinlichkeit, und sie steigt oder sinkt
+mit dem Gesamtzustand zwischen heilsam und unheilsam.
+
 Gewohnheit entsteht durch Wiederholung: Je öfter die MBI zu einem Thema
 engaged, desto langsamer verblasst es im AUI. Engage und disengage geschehen
 aber nie von allein, es ist immer die MBI.
@@ -230,7 +234,22 @@ class Unterbewusstsein:
         lerntempo: float = 2.0,
         faerbekraft: float = 0.5,
         ruhe: float = 0.5,
+        spontan: float = 0.05,
+        spontanstaerke: float = 0.3,
+        zufallshebel: float = 3.0,
+        zufall: random.Random | None = None,
     ):
+        # ANNAHME: Mit dieser Wahrscheinlichkeit pro Moment kommt ein Thema,
+        # das das AUI kennt, von selbst wieder auf, wenn die Haltung in der
+        # Mitte liegt. 0 schaltet das ab.
+        self.spontan = spontan
+        # ANNAHME: Wie stark etwas ist, das von selbst aufkommt.
+        self.spontanstaerke = spontanstaerke
+        # ANNAHME: Wie stark der Gesamtzustand diese Wahrscheinlichkeit
+        # verschiebt. Bei 3 kommt ein ganz negatives Thema in ganz unheilsamer
+        # Haltung viermal so oft auf, ein ganz heilsames dann gar nicht.
+        self.zufallshebel = zufallshebel
+        self.zufall = zufall or random.Random()
         # ANNAHME: Eine Erfahrung wirkt pro Moment um diesen Faktor schwächer nach.
         self.nachklang = nachklang
         # Mit welchem Anteil ihrer Stärke Erfahrungen aus anderen Gebieten
@@ -296,6 +315,33 @@ class Unterbewusstsein:
             # Je heilsamer die Haltung, desto weniger Impulse insgesamt.
             faktor *= 1 - self.ruhe * heilsamkeit
         return max(0.0, faktor)
+
+    def aufkommenschance(self, thema: str, heilsamkeit: float) -> float:
+        """Mit welcher Wahrscheinlichkeit ein Thema in diesem Moment von selbst aufkommt."""
+        # Je unheilsamer der Gesamtzustand, desto öfter Negatives und desto
+        # seltener Heilsames. Je heilsamer, desto öfter Heilsames, desto
+        # seltener Negatives und desto weniger insgesamt.
+        chance = self.spontan * max(0.0, 1 + self.zufallshebel * heilsamkeit * self.faerbung(thema))
+        if heilsamkeit > 0:
+            chance *= 1 - self.ruhe * heilsamkeit
+        return min(1.0, chance)
+
+    def lasse_aufkommen(self, zeit: int, heilsamkeit: float) -> list[str]:
+        """Lässt der Zufall entscheiden, welche Themen von selbst wieder aufkommen."""
+        if not self.spontan:
+            return []
+        staerkste: dict[str, Erfahrung] = {}
+        for e in self.erfahrungen:
+            if e.staerke > 0 and e.staerke > getattr(staerkste.get(e.thema), "staerke", 0.0):
+                staerkste[e.thema] = e
+        aufgekommen = []
+        for thema, vorlage in staerkste.items():
+            if self.zufall.random() < self.aufkommenschance(thema, heilsamkeit):
+                # ANNAHME: Was aufkommt, ist eine neue Erfahrung in dem Gebiet,
+                # in dem das Thema am stärksten erlebt wurde.
+                self.erlebe(Erfahrung(thema, self.spontanstaerke, zeit, vorlage.gebiete))
+                aufgekommen.append(thema)
+        return aufgekommen
 
     def nachklang_fuer(self, thema: str) -> float:
         """Wie langsam eine neue Erfahrung zu diesem Thema verblasst."""
@@ -544,12 +590,18 @@ class ManuelleBewussteIntention:
         haltungsschritt: float = 0.2,
         sog: float | None = 1.0,
         anfaelligkeit: float = 0.5,
+        uebergang: float = 0.25,
+        zufall: random.Random | None = None,
     ):
         self.entscheider = entscheider
         self.gebiete = [gebiet]
-        # Ab welcher Stärke etwas in der ABI zu stark ist, sodass die MBI sich
-        # aus Verlangen darauf richtet, wenn ihre Haltung in der Mitte liegt.
-        # None schaltet das ab.
+        self.zufall = zufall or random.Random()
+        # ANNAHME: Über diese Spanne unterhalb der Stärke, bei der die MBI
+        # sicher mitgerissen wird, steigt die Wahrscheinlichkeit von 0 auf 1.
+        self.uebergang = uebergang
+        # Ab welcher Stärke etwas in der ABI so stark ist, dass die MBI sich
+        # sicher aus Verlangen darauf richtet, wenn ihre Haltung in der Mitte
+        # liegt. None schaltet das ab.
         self.sog = sog
         # ANNAHME: Um welchen Anteil diese Stärke bei ganz unheilsamer Haltung
         # sinkt und bei ganz heilsamer steigt.
@@ -561,14 +613,14 @@ class ManuelleBewussteIntention:
         # ANNAHME: Jede Handlung der MBI verschiebt die Haltung um diesen Betrag.
         self.haltungsschritt = haltungsschritt
 
-    def sogschwelle(self, heilsamkeit: float) -> float | None:
-        """Ab welcher Stärke die MBI bei dieser Haltung mitgerissen wird."""
-        # Je unheilsamer der Zustand, desto weniger reicht aus. In heilsamer
-        # Haltung liegt die Schwelle über der vollen Stärke: Dann kann die MBI
-        # auch etwas sehr Starkes da sein lassen.
+    def sogchance(self, staerke: float, heilsamkeit: float) -> float:
+        """Mit welcher Wahrscheinlichkeit etwas dieser Stärke die MBI mitreißt."""
         if self.sog is None:
-            return None
-        return self.sog * (1 + self.anfaelligkeit * heilsamkeit)
+            return 0.0
+        # Je unheilsamer der Gesamtzustand, desto weniger Stärke reicht aus. Je
+        # heilsamer, desto eher kann die MBI auch sehr Starkes da sein lassen.
+        sicher_ab = self.sog * (1 + self.anfaelligkeit * heilsamkeit)
+        return round(max(0.0, min(1.0, 1 - (sicher_ab - staerke) / self.uebergang)), 9)
 
     def _verschiebe(self, richtung: int) -> None:
         verschoben = self.heilsamkeit + richtung * self.haltungsschritt
@@ -590,17 +642,18 @@ class ManuelleBewussteIntention:
         umgang = {t: h for t, h in entscheidung.umgang.items() if t in im_feld}
 
         # Wird etwas in der ABI zu stark, richtet sich die MBI aus Verlangen darauf.
-        # ANNAHME: Ist etwas zu stark, bewahrt davor nur, im selben Moment selbst
-        # zu engagen oder zu disengagen. Weder noch und ein Themenwechsel
-        # reichen dann nicht.
+        # Ob das geschieht, entscheidet der Zufall, mit einer Wahrscheinlichkeit
+        # je nach Stärke und Gesamtzustand.
+        # ANNAHME: Sicher bewahrt davor nur, im selben Moment selbst zu engagen
+        # oder zu disengagen. Weder noch und ein Themenwechsel schützen nicht.
         self.mitgerissen = []
-        schwelle = self.sogschwelle(lage.heilsamkeit)
-        if schwelle is not None:
-            for impuls in lage.abi_feld:
-                gewaehlt = umgang.get(impuls.thema, Umgang.WEDER_NOCH)
-                if impuls.staerke >= schwelle and gewaehlt is Umgang.WEDER_NOCH:
-                    umgang[impuls.thema] = Umgang.VERLANGEN
-                    self.mitgerissen.append(impuls.thema)
+        for impuls in lage.abi_feld:
+            if umgang.get(impuls.thema, Umgang.WEDER_NOCH) is not Umgang.WEDER_NOCH:
+                continue
+            chance = self.sogchance(impuls.staerke, lage.heilsamkeit)
+            if chance >= 1 or (chance > 0 and self.zufall.random() < chance):
+                umgang[impuls.thema] = Umgang.VERLANGEN
+                self.mitgerissen.append(impuls.thema)
 
         for thema, art in umgang.items():
             if art is not Umgang.WEDER_NOCH:
@@ -662,6 +715,7 @@ class Moment:
     umgang: Mapping[str, Umgang]  # Thema -> Umgang der MBI
     # Themen, die zu stark waren, sodass die MBI aus Verlangen darauf reagiert hat.
     mitgerissen: tuple[str, ...]
+    aufgekommen: tuple[str, ...]  # Themen, die im AUI von selbst aufgekommen sind
     einfluss: Mapping[str, float]  # Gebiet -> wie stark es Fremdes zurückdrängt
     heilsamkeit: float  # die Haltung der MBI: von -1 (unheilsam) bis +1 (heilsam)
     heilsamkeit_danach: float  # wie sie ab dem nächsten Moment gilt
@@ -692,15 +746,25 @@ class Geist:
         faerbekraft: float = 0.5,
         ruhe: float = 0.5,
         sog: bool = True,
+        spontan: float = 0.05,
     ):
+        # Ein gemeinsamer Zufall für alle drei Layer.
+        zufall = zufall or random.Random()
         self.unterbewusstsein = Unterbewusstsein(
-            nachklang, mitnahme, praegung, kopplung, faerbekraft=faerbekraft, ruhe=ruhe
+            nachklang,
+            mitnahme,
+            praegung,
+            kopplung,
+            faerbekraft=faerbekraft,
+            ruhe=ruhe,
+            spontan=spontan,
+            zufall=zufall,
         )
         self.automatisch = AutomatischeBewussteIntention(schwelle, chance, zufall)
-        # ANNAHME: Zu stark ist ein Thema, wenn es allein die Kapazität der MBI
-        # füllt. Mit `sog=False` wird die MBI nie mitgerissen.
+        # ANNAHME: Sicher mitgerissen wird die MBI in der Mitte von einem Thema,
+        # das allein ihre Kapazität füllt. Mit `sog=False` geschieht es nie.
         self.manuell = ManuelleBewussteIntention(
-            entscheider, gebiet, haltungsschritt, kapazitaet if sog else None
+            entscheider, gebiet, haltungsschritt, kapazitaet if sog else None, zufall=zufall
         )
         self.wirkung = wirkung
         # ANNAHME: Die Kapazität der MBI entspricht einem Thema in voller Stärke.
@@ -731,6 +795,7 @@ class Geist:
         # ANNAHME: Was im Feld der ABI auftaucht, bemisst sich am Feld, wie es
         # zu Beginn des Moments ist, also am Ergebnis des vorigen Moments.
         bisher_im_abi_feld = {impuls.thema for impuls in self.automatisch.feld}
+        aufgekommen = self.unterbewusstsein.lasse_aufkommen(self.zeit, self.manuell.heilsamkeit)
         einfluss = {
             g: self.unterbewusstsein.einfluss(g) for g in gebiete + gebiete_ohne_mbi
         }
@@ -783,6 +848,7 @@ class Geist:
             lage.abi_feld,
             umgang,
             tuple(self.manuell.mitgerissen),
+            tuple(aufgekommen),
             einfluss,
             heilsamkeit,
             self.manuell.heilsamkeit,

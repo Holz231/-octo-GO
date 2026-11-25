@@ -17,6 +17,7 @@ welche Lücken das Programm vorläufig mit eigenen Annahmen füllt.
     python -m geist --demo einfluss    # wie ein Gebiet durch Erfahrung an Einfluss gewinnt
     python -m geist --demo heilsam     # wie Abneigung die Haltung unheilsam macht
     python -m geist --demo sog         # wie etwas zu Starkes die MBI mitreißt
+    python -m geist --demo zufall      # wie der Gesamtzustand die Wahrscheinlichkeiten verschiebt
     python -m geist                    # interaktiv: du bist die MBI
     python -m pytest                   # Tests
 
@@ -120,6 +121,9 @@ Festgelegt:
     richtet.
 21. Je unheilsamer, also leidvoller, der Gesamtzustand ist, desto schwerer
     oder unwahrscheinlicher ist es, dass die MBI sich nicht beeinflussen lässt.
+22. Es gibt auch eine Zufälligkeitsvariable: eine Wahrscheinlichkeit, auch im
+    AUI, die je nach Stärke des Gesamtzustands von heilsam zu unheilsam jeweils
+    erhöht ist.
 
 ## 3. Vorläufige Annahmen im Programm
 
@@ -167,23 +171,38 @@ Zum Spektrum von heilsam zu unheilsam:
 - **Wie negativ oder heilsam ein Thema ist,** wächst mit jedem Umgang in
   dieselbe Richtung, nach einem Mal auf die Hälfte, nach zweien auf drei
   Viertel. Umgang in die andere Richtung hebt es wieder auf.
-- **Wann etwas zu stark ist:** In der Mitte zwischen heilsam und unheilsam,
-  wenn es allein die Kapazität der MBI füllt, also bei voller Stärke. Dann
-  richtet sich die MBI aus Verlangen darauf, als hätte sie selbst so
-  entschieden.
-- **Wie der Gesamtzustand das verschiebt:** Der Gesamtzustand ist die Haltung
-  der MBI. Bei ganz unheilsamer Haltung reicht schon die halbe Stärke. In
-  heilsamer Haltung liegt die Schwelle über der vollen Stärke: Dann wird die
-  MBI nie mitgerissen und kann auch sehr Starkes da sein lassen.
-- **Schwerer, nicht unwahrscheinlicher:** Das Programm setzt eine feste
-  Schwelle, keinen Zufall. Wer bei gleicher Haltung und Stärke einmal
-  mitgerissen wird, wird es immer.
-- **Was davor bewahrt, wenn etwas zu stark ist:** nur, im selben Moment selbst
-  zu dem Thema zu engagen oder zu disengagen. Weder noch und ein Themenwechsel
-  reichen dann nicht.
+- **Der Gesamtzustand** ist im Programm die Haltung der MBI.
+- **Mitgerissen werden ist eine Wahrscheinlichkeit.** In der Mitte zwischen
+  heilsam und unheilsam ist es sicher, wenn etwas allein die Kapazität der MBI
+  füllt, also bei voller Stärke. Darunter sinkt die Wahrscheinlichkeit: bei
+  Stärke 0,9 auf 60 %, bei 0,8 auf 20 %, ab 0,75 auf null.
+- **Wie der Gesamtzustand das verschiebt:** Bei ganz unheilsamer Haltung wird
+  die MBI schon bei halber Stärke sicher mitgerissen. Bei heilsam 20 % liegt
+  die Wahrscheinlichkeit selbst bei voller Stärke nur noch bei 60 %, ab
+  heilsam 50 % bei null.
+- **Was sicher davor bewahrt:** nur, im selben Moment selbst zu dem Thema zu
+  engagen oder zu disengagen. Weder noch und ein Themenwechsel schützen
+  nicht, sie lassen den Zufall entscheiden.
 - **Es ist immer Verlangen.** Dass die MBI von etwas zu Starkem aus Abneigung
   weggerissen wird, gibt es im Programm nicht.
-- **In den Demo-Läufen** außer `sog` ist das abgeschaltet.
+- **In den Demo-Läufen** außer `sog` ist das Mitreißen abgeschaltet. Der Lauf
+  `sog` verwendet einen festen Zufall, damit er jedes Mal gleich abläuft.
+
+Zum Zufall im AUI:
+
+- **Was der Zufall dort tut:** In jedem Moment kann jedes Thema, das das AUI
+  kennt, von selbst wieder aufkommen. In der Mitte zwischen heilsam und
+  unheilsam liegt die Wahrscheinlichkeit dafür bei 5 % je Thema und Moment.
+- **Wie der Gesamtzustand sie verschiebt:** Bei ganz unheilsamer Haltung kommt
+  ein ganz negatives Thema viermal so oft auf und ein ganz heilsames gar nicht.
+  Bei ganz heilsamer Haltung kommt ein heilsames doppelt so oft auf, ein
+  neutrales halb so oft und ein negatives gar nicht.
+- **Was aufkommt, ist eine neue Erfahrung** mittlerer Stärke (0,3) in dem
+  Gebiet, in dem das Thema am stärksten erlebt wurde. Sie klingt ab wie jede
+  andere und zählt wie jede andere.
+- **Zusätzlich zur Stärke:** Der Gesamtzustand verändert weiterhin auch die
+  Stärke der Impulse (siehe oben). Der Zufall kommt hinzu, er ersetzt das nicht.
+- **In den Demo-Läufen** außer `zufall` ist das Aufkommen abgeschaltet.
 
 Zum Einfluss der Gebiete auf die Impulse des AUI. Eingebaut sind zwei Wege:
 Ein Gebiet drängt zurück, was nicht zu ihm gehört, und ein Thema zieht

@@ -37,6 +37,7 @@ def geist_mit(
     mitnahme=0.5,
     haltungsschritt=0.0,
     sog=False,
+    spontan=0.0,
     **kwargs,
 ):
     """Ein Geist, bei dem jeder Test nur das sieht, was er prüft.
@@ -45,8 +46,9 @@ def geist_mit(
     halber Stärke mit; `mitnahme=None` lässt den Einfluss der Gebiete durch
     Erfahrung entstehen, wie im Modell. Die Haltung bleibt in der Mitte
     zwischen heilsam und unheilsam; erst ein `haltungsschritt` lässt sie sich
-    verschieben. Und die MBI wird von nichts mitgerissen, solange `sog` nicht
-    eingeschaltet ist.
+    verschieben. Die MBI wird von nichts mitgerissen, solange `sog` nicht
+    eingeschaltet ist, und im AUI kommt nichts von selbst auf, solange
+    `spontan` 0 ist.
     """
     geist = Geist(
         entscheider,
@@ -55,6 +57,7 @@ def geist_mit(
         mitnahme=mitnahme,
         haltungsschritt=haltungsschritt,
         sog=sog,
+        spontan=spontan,
         **kwargs,
     )
     for e in erfahrungen:
@@ -1088,7 +1091,7 @@ def test_die_haltung_wirkt_erst_ab_dem_naechsten_moment_auf_die_impulse():
 # --- Wird etwas in der ABI zu stark, richtet sich die MBI aus Verlangen darauf ---
 
 ZU_STARK = (erfahrung("Unruhe", 1.0),)
-NICHT_ZU_STARK = (erfahrung("Unruhe", 0.9),)
+NICHT_ZU_STARK = (erfahrung("Unruhe", 0.7),)
 
 
 def mitgerissen(entscheider=nichts, erfahrungen=ZU_STARK, **kwargs):
@@ -1144,18 +1147,46 @@ def mitgerissen_bei(heilsamkeit, staerke_der_unruhe, entscheider=nichts):
 
 
 def test_je_unheilsamer_der_zustand_desto_weniger_reicht_um_mitgerissen_zu_werden():
-    assert not mitgerissen_bei(heilsamkeit=0.0, staerke_der_unruhe=0.9)
+    assert not mitgerissen_bei(heilsamkeit=0.0, staerke_der_unruhe=0.75)
     assert mitgerissen_bei(heilsamkeit=-0.4, staerke_der_unruhe=0.9)
     assert mitgerissen_bei(heilsamkeit=-1.0, staerke_der_unruhe=0.5)
-    assert not mitgerissen_bei(heilsamkeit=-1.0, staerke_der_unruhe=0.45)
 
 
-def test_in_heilsamer_haltung_kann_die_mbi_auch_sehr_starkes_da_sein_lassen():
+def test_in_ganz_heilsamer_haltung_kann_die_mbi_auch_sehr_starkes_da_sein_lassen():
     weder_noch = immer(Umgang.WEDER_NOCH, "Unruhe")
 
     assert mitgerissen_bei(heilsamkeit=0.0, staerke_der_unruhe=1.0, entscheider=weder_noch)
-    assert not mitgerissen_bei(heilsamkeit=0.2, staerke_der_unruhe=1.0, entscheider=weder_noch)
-    assert not mitgerissen_bei(heilsamkeit=1.0, staerke_der_unruhe=1.0)
+    assert not mitgerissen_bei(heilsamkeit=1.0, staerke_der_unruhe=1.0, entscheider=weder_noch)
+
+
+def test_ob_die_mbi_mitgerissen_wird_ist_eine_wahrscheinlichkeit():
+    chance = mbi_mit("A").sogchance
+
+    # In der Mitte: sicher bei voller Stärke, darunter immer unwahrscheinlicher.
+    assert [chance(staerke, 0.0) for staerke in (1.0, 0.9, 0.8, 0.75, 0.5)] == [1.0, 0.6, 0.2, 0.0, 0.0]
+    # Je unheilsamer, desto wahrscheinlicher, je heilsamer, desto unwahrscheinlicher.
+    assert [chance(0.9, h) for h in (-0.4, -0.2, 0.0, 0.2)] == [1.0, 1.0, 0.6, 0.2]
+    assert [chance(1.0, h) for h in (0.0, 0.2, 0.4, 0.6)] == [1.0, 0.6, 0.2, 0.0]
+
+
+class FesterZufall:
+    """Ein Zufall, der immer dieselbe Zahl liefert."""
+
+    def __init__(self, zahl):
+        self.zahl = zahl
+
+    def random(self):
+        return self.zahl
+
+
+def test_bei_einer_wahrscheinlichkeit_dazwischen_entscheidet_der_zufall():
+    def mitgerissen_mit(zahl):
+        geist = geist_mit(erfahrungen=[erfahrung("Unruhe", 0.9)], sog=True, zufall=FesterZufall(zahl))
+        return bool(geist.schritt().mitgerissen)
+
+    # Bei Stärke 0,9 in der Mitte liegt die Wahrscheinlichkeit bei 0,6.
+    assert mitgerissen_mit(0.59)
+    assert not mitgerissen_mit(0.61)
 
 
 def test_zu_stark_ist_was_allein_die_kapazitaet_der_mbi_fuellt():
@@ -1171,3 +1202,62 @@ def test_mitgerissen_werden_verstaerkt_das_thema_und_macht_es_negativ():
     assert (neu.thema, neu.staerke) == ("Unruhe", 0.4)
     assert geist.unterbewusstsein.faerbung("Unruhe") == -0.5
     assert geist.unterbewusstsein.gewohnheit == {"Unruhe": 1}
+
+
+# --- Der Zufall im AUI: Was von selbst aufkommt, hängt vom Gesamtzustand ab ---
+
+
+def aui_mit_drei_themen(**kwargs):
+    unterbewusstsein = aui(spontan=0.1, zufallshebel=3.0, ruhe=0.5, **kwargs)
+    for thema, bilanz in (("Negativ", -8), ("Neutral", 0), ("Heilsam", 8)):
+        unterbewusstsein.erlebe(erfahrung(thema, 0.4, "Familie"))
+        unterbewusstsein.umgangsbilanz[thema] = bilanz
+    return unterbewusstsein
+
+
+def chancen_bei(heilsamkeit):
+    chance = aui_mit_drei_themen().aufkommenschance
+    return tuple(round(chance(thema, heilsamkeit), 2) for thema in ("Negativ", "Neutral", "Heilsam"))
+
+
+def test_in_der_mitte_kommt_alles_gleich_wahrscheinlich_von_selbst_auf():
+    assert chancen_bei(0.0) == (0.1, 0.1, 0.1)
+
+
+def test_je_unheilsamer_desto_oefter_negatives_und_desto_seltener_heilsames():
+    assert chancen_bei(-1.0) == (0.4, 0.1, 0.0)
+    assert chancen_bei(-0.5)[0] < chancen_bei(-1.0)[0]
+
+
+def test_je_heilsamer_desto_weniger_insgesamt_und_desto_eher_heilsames():
+    negativ, neutral, heilsam = chancen_bei(1.0)
+
+    assert (negativ, neutral, heilsam) == (0.0, 0.05, 0.2)
+    assert sum((negativ, neutral, heilsam)) < sum(chancen_bei(-1.0))
+
+
+def test_was_aufkommt_ist_eine_neue_erfahrung_im_gebiet_des_themas():
+    unterbewusstsein = aui_mit_drei_themen(zufall=FesterZufall(0.0))
+    aufgekommen = unterbewusstsein.lasse_aufkommen(zeit=5, heilsamkeit=0.0)
+    neu = unterbewusstsein.erfahrungen[-1]
+
+    assert aufgekommen == ["Negativ", "Neutral", "Heilsam"]
+    assert (neu.thema, neu.staerke, neu.zeit, neu.gebiete) == ("Heilsam", 0.3, 5, ("Familie",))
+
+
+def test_bei_schlechtem_wurf_kommt_nichts_auf():
+    unterbewusstsein = aui_mit_drei_themen(zufall=FesterZufall(0.99))
+    assert unterbewusstsein.lasse_aufkommen(zeit=5, heilsamkeit=0.0) == []
+    assert len(unterbewusstsein.erfahrungen) == 3
+
+
+def test_was_das_aui_nicht_kennt_kann_nicht_aufkommen():
+    assert aui(spontan=1.0).lasse_aufkommen(zeit=0, heilsamkeit=0.0) == []
+
+
+def test_der_moment_zeigt_was_von_selbst_aufgekommen_ist():
+    geist = geist_mit(erfahrungen=[erfahrung("Sorge", 0.5)], spontan=1.0, nachklang=1.0)
+    moment = geist.schritt()
+
+    assert moment.aufgekommen == ("Sorge",)
+    assert staerke(moment, "Sorge") == 0.8
