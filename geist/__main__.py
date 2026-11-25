@@ -5,6 +5,11 @@
     python -m geist --demo haltung   wie eine frühere Haltung aus dem AUI auftaucht
     python -m geist --demo gebiete   wie das AUI Themen in neue Gebiete mitführt
     python -m geist --demo erinnerung  wie die MBI in die Erinnerung wechselt
+    python -m geist --demo gewohnheit  wie wiederholtes engage ein Thema prägt
+    python -m geist --demo emotion     wie Emotion und Erfahrung zusammen auftauchen
+
+Ein Thema mit Gewohnheit trägt in der Anzeige die Marke ↻ und die Zahl, wie
+oft die MBI dazu engaged hat, abzüglich der Male, die sie disengaged hat.
 """
 
 from __future__ import annotations
@@ -13,8 +18,10 @@ import argparse
 import random
 
 from .modell import (
+    EMOTION,
     ERINNERUNG,
     JETZIGE_ERFAHRUNG,
+    KOERPER,
     SINNE,
     Entscheidung,
     Erfahrung,
@@ -31,7 +38,12 @@ BESONDERE_GEBIETE = {
     "jetzt": JETZIGE_ERFAHRUNG,
     "jetzige erfahrung": JETZIGE_ERFAHRUNG,
     "erinnerung": ERINNERUNG,
+    "emotion": EMOTION,
+    "körper": KOERPER,
+    "koerper": KOERPER,
 }
+# Kürzel, mit denen man beim Eingeben sagt, in welchem Gebiet man etwas erlebt.
+ERLEBEN = {"s": SINNE, "e": EMOTION, "k": KOERPER}
 
 
 def benenne(gebiete: tuple[str, ...]) -> str:
@@ -51,10 +63,11 @@ def zeige(moment: Moment, schwelle: float) -> None:
     themen = list(impulse)
     if themen:
         # Eine frühere Haltung, die aus dem AUI auftaucht, als solche kennzeichnen.
-        namen = {
-            t: f"{t} (Haltung)" if impulse[t].haltung else t
-            for t in themen
-        }
+        namen = {}
+        for t in themen:
+            namen[t] = f"{t} (Haltung)" if impulse[t].haltung else t
+            if impulse[t].gewohnheit:
+                namen[t] += f" ↻{impulse[t].gewohnheit}"
         breite = max(len("Thema"), *(len(n) for n in namen.values()))
         # Die beiden Felder grenzen aneinander: Der Balken reicht über die Grenze,
         # sobald ein Impuls stark genug ist, um auch im Feld der ABI aufzutauchen.
@@ -209,7 +222,47 @@ def demo_haltung() -> None:
         zeige(geist.schritt(), geist.automatisch.schwelle)
 
 
+def demo_gewohnheit() -> None:
+    """Wiederholtes engage prägt ein Thema: Es verblasst langsamer.
+
+    Grübeln und Ohrwurm sind anfangs gleich stark. Zum Grübeln engaged die MBI
+    dreimal, zum Ohrwurm nie. Danach lässt sie beide in Ruhe. Der Ohrwurm
+    verblasst schnell, das Grübeln bleibt lange im Feld der ABI, obwohl die
+    MBI nichts mehr dafür tut. Themengebiete ohne die MBI sind hier
+    abgeschaltet, und die Kapazität ist groß genug für beide.
+    """
+
+    def entscheider(lage: Lage) -> Entscheidung:
+        return Entscheidung({"Grübeln": Umgang.ENGAGE} if geist.zeit < 3 else {})
+
+    geist = Geist(entscheider, "Abend", chance=0.0, kapazitaet=3.0)
+    for thema in ("Grübeln", "Ohrwurm"):
+        geist.unterbewusstsein.erlebe(Erfahrung(thema, 0.8, 0, ("Abend",)))
+    for _ in range(9):
+        zeige(geist.schritt(), geist.automatisch.schwelle)
+
+
+def demo_emotion() -> None:
+    """Eine Emotion und eine Erfahrung sind eigene Themen, tauchen aber zusammen auf.
+
+    In Moment 0 hört die MBI einen Streit und erlebt dabei Wut. Der Streit ist
+    ein Sinneseindruck, die Wut eine Emotion: zwei Themen in zwei Gebieten.
+    Weil sie zusammen erlebt wurden, sind sie verknüpft. Beide klingen ab und
+    verschwinden aus dem Feld der ABI. In Moment 6 hört die MBI nur wieder
+    einen Streit, ohne neue Wut, und die Wut taucht von selbst mit auf.
+    Themengebiete ohne die MBI sind hier abgeschaltet.
+    """
+    sinne = {0: {"Streit": 0.9}, 6: {"Streit": 0.9}}
+    emotion = {0: {"Wut": 0.7}}
+    geist = Geist(lambda lage: Entscheidung(), SINNE, chance=0.0)
+    for zeit in range(8):
+        moment = geist.schritt(sinne.get(zeit), emotion.get(zeit))
+        zeige(moment, geist.automatisch.schwelle)
+
+
 DEMOS = {
+    "gewohnheit": demo_gewohnheit,
+    "emotion": demo_emotion,
     "haltung": demo_haltung,
     "umgang": demo_umgang,
     "gebiete": demo_gebiete,
@@ -242,12 +295,18 @@ def lies_entscheidung(text: str) -> Entscheidung:
 
 def frage_entscheidung(lage: Lage) -> Entscheidung:
     feld = ", ".join(f"{i.thema} ({i.staerke:.2f})" for i in lage.abi_feld)
-    sinne = ", ".join(f"{t} ({s:.2f})" for t, s in lage.sinne.items())
     print(f"  Deine Haltung: {benenne(lage.gebiete)}")
     if lage.gebiete_ohne_mbi:
         print(f"  Ohne dich:     {benenne(lage.gebiete_ohne_mbi)}")
     print(f"  ABI-Feld:      {feld or '-'}")
-    print(f"  Sinne:         {sinne or '-'}")
+    for name, erlebtes in (
+        ("Sinne:", lage.sinne),
+        ("Emotion:", lage.emotion),
+        ("Körper:", lage.koerper),
+    ):
+        if erlebtes or name == "Sinne:":
+            liste = ", ".join(f"{t} ({s:.2f})" for t, s in erlebtes.items())
+            print(f"  {name:<14} {liste or '-'}")
     im_feld = {impuls.thema for impuls in lage.abi_feld}
     while True:
         antwort = input("  Was tust du? ")
@@ -263,14 +322,23 @@ def frage_entscheidung(lage: Lage) -> Entscheidung:
         print("  nur zu dem, was dort auftaucht. Für einen Themenwechsel: g Gebiet")
 
 
-def lies_sinne(text: str) -> dict[str, float]:
-    """'Laerm, Atem=0.1' -> {'Laerm': 0.5, 'Atem': 0.1}"""
-    sinne: dict[str, float] = {}
+def lies_erlebtes(text: str) -> dict[str, dict[str, float]]:
+    """'Laerm, e:Angst=0.7, k:Enge' -> je Gebiet, was darin erlebt wird.
+
+    Ohne Kürzel ist es ein Sinneseindruck, 'e:' eine Emotion, 'k:' eine
+    Körperempfindung. Ohne Stärke gilt 0.5.
+    """
+    erlebtes: dict[str, dict[str, float]] = {gebiet: {} for gebiet in ERLEBEN.values()}
     for teil in text.split(","):
+        kuerzel, doppelpunkt, rest = teil.partition(":")
+        if doppelpunkt and kuerzel.strip().lower() in ERLEBEN:
+            gebiet, teil = ERLEBEN[kuerzel.strip().lower()], rest
+        else:
+            gebiet = SINNE
         thema, _, staerke = teil.partition("=")
         if thema.strip():
-            sinne[thema.strip()] = float(staerke) if staerke.strip() else 0.5
-    return sinne
+            erlebtes[gebiet][thema.strip()] = float(staerke) if staerke.strip() else 0.5
+    return erlebtes
 
 
 def interaktiv() -> None:
@@ -278,8 +346,9 @@ def interaktiv() -> None:
     print("Deine Haltung ist das Gebiet, in dem du agierst.")
     print()
     print("Jeder Moment hat zwei Eingaben:")
-    print("1. Sinne: 'Thema' oder 'Thema=Stärke' (0 bis 1), mehrere mit Komma.")
-    print("   Leer = keine Eindrücke, 'q' beendet.")
+    print("1. Was du erlebst: 'Thema' oder 'Thema=Stärke' (0 bis 1), mehrere mit Komma.")
+    print("   Ohne Kürzel ist es ein Sinneseindruck. 'e:Angst' ist eine Emotion,")
+    print("   'k:Enge' eine Körperempfindung. Leer = nichts, 'q' beendet.")
     print("2. Was du tust, mehrere mit Komma:")
     print("   'e Thema'  engage: verstärkt das Thema und macht es zu deiner Haltung.")
     print("              Stammt es aus deiner jetzigen Haltung, läuft es parallel")
@@ -288,8 +357,8 @@ def interaktiv() -> None:
     print("   'd Thema'  disengage: schwächt das Thema, es gehört nicht mehr zu deiner Haltung.")
     print("              Beides geht nur zu Themen, die im ABI-Feld auftauchen.")
     print("   'g Gebiet' Themenwechsel, ohne etwas zu verstärken: in ein beliebiges")
-    print("              Themengebiet, 'sinne', 'jetzt' (die jetzige Erfahrung) oder")
-    print("              'erinnerung'.")
+    print("              Themengebiet, 'sinne', 'jetzt' (die jetzige Erfahrung),")
+    print("              'erinnerung', 'emotion' oder 'körper'.")
     print("   Leer = Themenerhalt und weder noch: Dann kann ein Thema im ABI-Feld")
     print("   von selbst zum Themengebiet werden.")
     try:
@@ -298,15 +367,16 @@ def interaktiv() -> None:
             gebiet = lies_gebiet(input("\nIn welcher Haltung bist du? "))
         geist = Geist(frage_entscheidung, gebiet)
         while True:
-            eingabe = input("\nWas nehmen deine Sinne wahr? ")
+            eingabe = input("\nWas erlebst du gerade? ")
             if eingabe.strip().lower() == "q":
                 break
             try:
-                sinne = lies_sinne(eingabe)
+                erlebtes = lies_erlebtes(eingabe)
             except ValueError:
                 print("  Stärke muss eine Zahl sein, zum Beispiel Atem=0.1")
                 continue
-            zeige(geist.schritt(sinne), geist.automatisch.schwelle)
+            moment = geist.schritt(erlebtes[SINNE], erlebtes[EMOTION], erlebtes[KOERPER])
+            zeige(moment, geist.automatisch.schwelle)
     except EOFError:
         pass
 

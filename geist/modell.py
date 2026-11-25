@@ -11,7 +11,9 @@ AUI und ABI sind zwei verschiedene, aneinander angrenzende Felder.
 Die MBI befindet sich immer in einer Haltung. Die Haltung ist das Gebiet, das
 die MBI erschafft und in dem sie agiert, manchmal mehrere zugleich. Ein
 Gebiet kann ein Themengebiet sein (davon gibt es unendlich viele), die jetzige
-Erfahrung, die Sinne oder die Erinnerung. Die jetzige Erfahrung ist alles, was
+Erfahrung, die Sinne, die Erinnerung, die Emotion oder der Körper. Emotion und
+Körper sind zwei verschiedene Gebiete, und was darin liegt, sind eigene Themen
+wie alles andere auch. Die jetzige Erfahrung ist alles, was
 im Feld der ABI auftaucht. An den Gebieten orientieren sich AUI und ABI. Das
 AUI führt aber vergangene Themen und Erfahrungen mit in jedes neue Gebiet. Wie
 die MBI und das AUI gerade sind, formt gleichzeitig die wahrgenommene Realität
@@ -45,6 +47,13 @@ Mit etwas, das nur im AUI liegt, kann die MBI nicht umgehen. Sie kann aber
 Erinnerungen aktivieren. Die Erinnerung ist dabei nur ein anderes Gebiet: Die
 MBI aktiviert sie, indem sie ihr Thema dorthin wechselt.
 
+Gewohnheit entsteht durch Wiederholung: Je öfter die MBI zu einem Thema
+engaged, desto langsamer verblasst es im AUI. Engage und disengage geschehen
+aber nie von allein, es ist immer die MBI.
+
+Eine Erfahrung und eine Emotion sind eigene Themen. Sie können aber verstärkt
+zusammen auftauchen.
+
 Ablauf eines Moments:
 
 1. Das AUI erzeugt Impulse aus vorherigen und jetzigen Erfahrungen, orientiert
@@ -61,19 +70,21 @@ Ablauf eines Moments:
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Callable, Collection, Mapping
 
 # Schwächere Impulse gelten als nicht vorhanden.
 MINDESTSTAERKE = 0.01
 
-# Drei besondere Gebiete, in denen sich die MBI bewegen kann. Jeder andere Name
+# Fünf besondere Gebiete, in denen sich die MBI bewegen kann. Jeder andere Name
 # steht für ein Themengebiet.
 SINNE = "Sinne"
 JETZIGE_ERFAHRUNG = "jetzige Erfahrung"
 ERINNERUNG = "Erinnerung"
-BESONDERE_GEBIETE = (SINNE, JETZIGE_ERFAHRUNG, ERINNERUNG)
+EMOTION = "Emotion"
+KOERPER = "Körper"
+BESONDERE_GEBIETE = (SINNE, JETZIGE_ERFAHRUNG, ERINNERUNG, EMOTION, KOERPER)
 
 # Herkunft von etwas, das in der jetzigen Erfahrung entstanden ist, aber nicht
 # mehr im Feld der ABI auftaucht.
@@ -96,6 +107,9 @@ class Erfahrung:
     # Die Gebiete, zu denen sie gehört. Bei allem, was die MBI erlebt hat, ist
     # das die Haltung, in der sie dabei war: Die Erfahrung enthält sie.
     gebiete: tuple[str, ...]
+    # Um welchen Faktor sie pro Moment schwächer nachwirkt. Das AUI legt ihn
+    # fest, wenn es die Erfahrung aufnimmt.
+    nachklang: float | None = None
 
 
 @dataclass(frozen=True)
@@ -108,6 +122,8 @@ class Impuls:
     haltung: bool = False
     # Ob das Thema aus der jetzigen Haltung der MBI stammt.
     aus_haltung: bool = False
+    # Wie oft die MBI dazu engaged hat, abzüglich der Male, die sie disengaged hat.
+    gewohnheit: int = 0
 
 
 @dataclass(frozen=True)
@@ -118,6 +134,8 @@ class Lage:
     gebiete_ohne_mbi: tuple[str, ...]  # Themengebiete, die von selbst entstanden sind
     abi_feld: tuple[Impuls, ...]  # die wahrgenommene Realität
     sinne: Mapping[str, float]  # sensorische Eindrücke: Thema -> Stärke
+    emotion: Mapping[str, float] = field(default_factory=dict)  # Emotionen dieses Moments
+    koerper: Mapping[str, float] = field(default_factory=dict)  # Körperempfindungen
 
     def staerke(self, thema: str) -> float:
         """Wie stark ein Thema im Feld der ABI auftaucht (0 = gar nicht)."""
@@ -166,12 +184,28 @@ class Unterbewusstsein:
     Die Impulse liegen in seinem Feld, das an das Feld der ABI angrenzt.
     """
 
-    def __init__(self, nachklang: float = 0.8, mitnahme: float = 0.5):
+    def __init__(
+        self,
+        nachklang: float = 0.8,
+        mitnahme: float = 0.5,
+        praegung: float = 0.5,
+        kopplung: float = 0.5,
+    ):
         # ANNAHME: Eine Erfahrung wirkt pro Moment um diesen Faktor schwächer nach.
         self.nachklang = nachklang
         # ANNAHME: Erfahrungen aus anderen Gebieten kommen mit diesem Anteil
         # ihrer Stärke mit. Die aus den jetzigen Gebieten zählen voll.
         self.mitnahme = mitnahme
+        # ANNAHME: Wie stark jedes engage oder disengage das Verblassen eines
+        # Themas verlangsamt oder beschleunigt.
+        self.praegung = praegung
+        # ANNAHME: Welchen Anteil seiner Stärke ein Thema an ein anderes
+        # weitergibt, mit dem es fest verknüpft ist.
+        self.kopplung = kopplung
+        # Thema -> wie oft engaged, abzüglich wie oft disengaged.
+        self.gewohnheit: dict[str, int] = {}
+        # Zwei Themen -> wie oft sie im selben Moment erlebt wurden.
+        self.verknuepfungen: dict[frozenset[str], int] = {}
         self.erfahrungen: list[Erfahrung] = []
         self.feld: list[Impuls] = []
         # Stand der letzten Impulse, für das Gewicht der Gebiete der MBI.
@@ -179,7 +213,30 @@ class Unterbewusstsein:
         self._eigene: dict[str, dict[str, float]] = {}  # Gebiet -> Thema -> Stärke
 
     def erlebe(self, erfahrung: Erfahrung) -> None:
+        if erfahrung.nachklang is None:
+            erfahrung = replace(erfahrung, nachklang=self.nachklang_fuer(erfahrung.thema))
         self.erfahrungen.append(erfahrung)
+
+    def uebe(self, thema: str, richtung: int) -> None:
+        """Hält fest, dass die MBI engaged (+1) oder disengaged (-1) hat."""
+        self.gewohnheit[thema] = self.gewohnheit.get(thema, 0) + richtung
+
+    def nachklang_fuer(self, thema: str) -> float:
+        """Wie langsam eine neue Erfahrung zu diesem Thema verblasst."""
+        # ANNAHME: Die Gewohnheit wirkt auf Erfahrungen, die ab jetzt dazukommen.
+        # Was schon im AUI liegt, verblasst weiter wie bisher.
+        gewohnheit = self.gewohnheit.get(thema, 0)
+        if gewohnheit >= 0:
+            return self.nachklang ** (1 / (1 + self.praegung * gewohnheit))
+        return self.nachklang ** (1 - self.praegung * gewohnheit)
+
+    def verknuepfe(self, themen: Collection[str]) -> None:
+        """Hält fest, dass diese Themen im selben Moment erlebt wurden."""
+        themen = sorted(set(themen))
+        for i, a in enumerate(themen):
+            for b in themen[i + 1 :]:
+                paar = frozenset((a, b))
+                self.verknuepfungen[paar] = self.verknuepfungen.get(paar, 0) + 1
 
     def erzeuge_impulse(
         self,
@@ -206,7 +263,8 @@ class Unterbewusstsein:
             if ERINNERUNG in gebiete and e.zeit < zeit:
                 beitrag, mitgefuehrt = e.staerke, False
             else:
-                beitrag = e.staerke * self.nachklang ** (zeit - e.zeit)
+                nachklang = self.nachklang if e.nachklang is None else e.nachklang
+                beitrag = e.staerke * nachklang ** (zeit - e.zeit)
                 mitgefuehrt = not any(
                     gehoert_zum_gebiet(e, g, im_abi_feld) for g in gebiete
                 )
@@ -235,6 +293,19 @@ class Unterbewusstsein:
                     je_thema = enthalten.setdefault(g, {})
                     je_thema[e.thema] = je_thema.get(e.thema, 0.0) + beitrag
 
+        # Was zusammen erlebt wurde, taucht verstärkt zusammen auf: Jedes Thema
+        # bekommt einen Teil der Stärke seiner Partner dazu.
+        # ANNAHME: Die Bindung wächst mit jedem gemeinsamen Erleben (einmal: 0,5,
+        # zweimal: 0,75) und zieht auch ein Thema mit, das sonst verklungen wäre.
+        basis = dict(staerken)
+        for paar, anzahl in self.verknuepfungen.items():
+            a, b = sorted(paar)
+            bindung = 1 - 0.5**anzahl
+            for thema, partner in ((a, b), (b, a)):
+                zug = self.kopplung * bindung * min(1.0, max(0.0, basis.get(partner, 0.0)))
+                if zug:
+                    staerken[thema] = staerken.get(thema, 0.0) + zug
+
         impulse = []
         for thema, staerke in staerken.items():
             if staerke < MINDESTSTAERKE:
@@ -247,13 +318,16 @@ class Unterbewusstsein:
             )
             # ANNAHME: Ein Thema stammt aus der jetzigen Haltung, wenn
             # mindestens die Hälfte seiner Stärke von dort kommt.
-            stammt_aus_haltung = 2 * aus_haltung.get(thema, 0.0) >= staerke
+            # Was ein Thema von seinen Partnern dazubekommt, zählt dabei nicht.
+            eigenes = basis.get(thema, 0.0)
+            stammt_aus_haltung = eigenes > 0 and 2 * aus_haltung.get(thema, 0.0) >= eigenes
             impulse.append(
                 Impuls(
                     thema,
                     min(1.0, staerke),
                     tuple(mitgebracht_aus),
                     aus_haltung=stammt_aus_haltung,
+                    gewohnheit=self.gewohnheit.get(thema, 0),
                 )
             )
 
@@ -266,7 +340,12 @@ class Unterbewusstsein:
             if frueher in themen:
                 staerke = max(staerke, themen[frueher].staerke)
             if staerke >= MINDESTSTAERKE:
-                themen[frueher] = Impuls(frueher, min(1.0, staerke), haltung=True)
+                themen[frueher] = Impuls(
+                    frueher,
+                    min(1.0, staerke),
+                    haltung=True,
+                    gewohnheit=self.gewohnheit.get(frueher, 0),
+                )
 
         self.feld = sorted(themen.values(), key=lambda i: i.staerke, reverse=True)
         self._staerken = {i.thema: i.staerke for i in self.feld}
@@ -424,6 +503,8 @@ class Moment:
     gebiete: tuple[str, ...]  # die Haltung der MBI: die Gebiete, in denen sie agiert hat
     gebiete_ohne_mbi: tuple[str, ...]  # Themengebiete, die von selbst bestanden
     sinne: Mapping[str, float]  # sensorische Eindrücke dieses Moments
+    emotion: Mapping[str, float]  # Emotionen dieses Moments
+    koerper: Mapping[str, float]  # Körperempfindungen dieses Moments
     aui_feld: tuple[Impuls, ...]  # alles, was im Feld des AUI liegt
     abi_feld: tuple[Impuls, ...]  # der Teil, der auch im Feld der ABI auftaucht
     umgang: Mapping[str, Umgang]  # Thema -> Umgang der MBI
@@ -444,12 +525,14 @@ class Geist:
         kapazitaet: float = 1.0,
         nachklang: float = 0.8,
         mitnahme: float = 0.5,
+        praegung: float = 0.5,
+        kopplung: float = 0.5,
         schwelle: float = 0.3,
         chance: float = 0.25,
         zufall: random.Random | None = None,
         wirkung: Mapping[Umgang, float] = STANDARD_WIRKUNG,
     ):
-        self.unterbewusstsein = Unterbewusstsein(nachklang, mitnahme)
+        self.unterbewusstsein = Unterbewusstsein(nachklang, mitnahme, praegung, kopplung)
         self.automatisch = AutomatischeBewussteIntention(schwelle, chance, zufall)
         self.manuell = ManuelleBewussteIntention(entscheider, gebiet)
         self.wirkung = wirkung
@@ -457,15 +540,26 @@ class Geist:
         self.kapazitaet = kapazitaet
         self.zeit = 0
 
-    def schritt(self, sinne: Mapping[str, float] | None = None) -> Moment:
-        """Ein Moment. `sinne` sind die sensorischen Eindrücke: Thema -> Stärke."""
-        sinne = dict(sinne or {})
+    def schritt(
+        self,
+        sinne: Mapping[str, float] | None = None,
+        emotion: Mapping[str, float] | None = None,
+        koerper: Mapping[str, float] | None = None,
+    ) -> Moment:
+        """Ein Moment.
+
+        `sinne`, `emotion` und `koerper` sind, was in diesem Moment erlebt wird:
+        jeweils Thema -> Stärke.
+        """
+        sinne, emotion, koerper = dict(sinne or {}), dict(emotion or {}), dict(koerper or {})
         gebiete = tuple(self.manuell.gebiete)
         gebiete_ohne_mbi = tuple(self.automatisch.gebiete_ohne_mbi)
-        # ANNAHME: Sensorische Eindrücke gehen ins AUI und gehören zum Gebiet
-        # der Sinne, egal in welchem Gebiet sich die MBI gerade bewegt.
-        for thema, staerke in sinne.items():
-            self.unterbewusstsein.erlebe(Erfahrung(thema, staerke, self.zeit, (SINNE,)))
+        # ANNAHME: Sinneseindrücke, Emotionen und Körperempfindungen gehen ins
+        # AUI und gehören jeweils zu ihrem eigenen Gebiet, egal in welchem
+        # Gebiet sich die MBI gerade bewegt.
+        for gebiet, erlebtes in ((SINNE, sinne), (EMOTION, emotion), (KOERPER, koerper)):
+            for thema, staerke in erlebtes.items():
+                self.unterbewusstsein.erlebe(Erfahrung(thema, staerke, self.zeit, (gebiet,)))
 
         # ANNAHME: Was im Feld der ABI auftaucht, bemisst sich am Feld, wie es
         # zu Beginn des Moments ist, also am Ergebnis des vorigen Moments.
@@ -476,7 +570,10 @@ class Geist:
             self.zeit, gebiete + gebiete_ohne_mbi, bisher_im_abi_feld, gebiete
         )
         abi_feld = self.automatisch.nimm_wahr(aui_feld)
-        lage = Lage(gebiete, gebiete_ohne_mbi, tuple(abi_feld), sinne)
+        # ANNAHME: Was im selben Moment erlebt wird, verknüpft sich miteinander.
+        # Die Verknüpfung wirkt ab dem nächsten Moment.
+        self.unterbewusstsein.verknuepfe([*sinne, *emotion, *koerper])
+        lage = Lage(gebiete, gebiete_ohne_mbi, tuple(abi_feld), sinne, emotion, koerper)
         # ANNAHME: Ein Wechsel der Gebiete gilt ab dem nächsten Moment.
         umgang = self.manuell.richte_aus(lage)
 
@@ -485,6 +582,10 @@ class Geist:
             if wirkung < 0:
                 # Schwächen lässt sich etwas nur so weit, wie es auftaucht.
                 wirkung = max(wirkung, -lage.staerke(thema))
+            # Wiederholung prägt: Engage macht das Thema zur Gewohnheit,
+            # disengage baut sie wieder ab.
+            if art is not Umgang.WEDER_NOCH:
+                self.unterbewusstsein.uebe(thema, 1 if art is Umgang.ENGAGE else -1)
             if wirkung:
                 # Die Erfahrung enthält die Haltung, in der die MBI dabei war.
                 self.unterbewusstsein.erlebe(Erfahrung(thema, wirkung, self.zeit, gebiete))
@@ -501,6 +602,8 @@ class Geist:
             gebiete,
             gebiete_ohne_mbi,
             sinne,
+            emotion,
+            koerper,
             tuple(aui_feld),
             lage.abi_feld,
             umgang,

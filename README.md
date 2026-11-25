@@ -12,6 +12,8 @@ welche Lücken das Programm vorläufig mit eigenen Annahmen füllt.
     python -m geist --demo haltung     # wie eine frühere Haltung aus dem AUI auftaucht
     python -m geist --demo gebiete     # wie das AUI Themen in neue Gebiete mitführt
     python -m geist --demo erinnerung  # wie die MBI in die Erinnerung wechselt
+    python -m geist --demo gewohnheit  # wie wiederholtes engage ein Thema prägt
+    python -m geist --demo emotion     # wie Emotion und Erfahrung zusammen auftauchen
     python -m geist                    # interaktiv: du bist die MBI
     python -m pytest                   # Tests
 
@@ -38,11 +40,18 @@ Festgelegt:
    wahrgenommen. Es wird dabei nicht selbst zur ABI.
 3. Die MBI bewegt sich immer in einem bestimmten Gebiet. Dieses Gebiet ist
    ihre Haltung: Eine Haltung wird durch die MBI erschaffen, und man befindet
-   sich immer in einer. Es gibt vier Arten von Gebieten:
+   sich immer in einer. Es gibt sechs Arten von Gebieten:
    - ein Themengebiet (davon gibt es unendlich viele, etwa Familie oder Arbeit),
    - die jetzige Erfahrung: alles, was im Feld der ABI auftaucht,
    - die sensorischen Eindrücke,
-   - die Erinnerung.
+   - die Erinnerung,
+   - die Emotion,
+   - den Körper.
+
+   Emotion und Körper sind zwei verschiedene Gebiete. Was darin liegt, sind
+   eigene Themen wie alles andere auch. Auch ein Zustand oder eine
+   Grundstimmung ist nur ein Thema: Ist es stark genug, kommt es in die ABI,
+   und die MBI kann es aufgreifen und durch engage oder disengage beeinflussen.
 4. An dem Gebiet, in dem sich die MBI bewegt, orientieren sich ABI und AUI.
 5. Das AUI führt vergangene Themen und Erfahrungen mit sich in neue Gebiete,
    auf die sich die MBI richtet.
@@ -76,9 +85,17 @@ Festgelegt:
     anderes Themengebiet.
 11. Das AUI kann die Haltung beeinflussen: Enthält es eine Haltung, kann diese
     ins Bewusstsein auftauchen, und die MBI kann dann darauf engagen.
+12. Gewohnheit entsteht durch Wiederholung: Je öfter die MBI zu einem Thema
+    engaged, desto langsamer verblasst es im AUI und desto leichter taucht es
+    von selbst in der ABI auf. Haltungen sind dabei auch nur Themengebiete.
+    Engage und disengage geschehen nie von allein, es ist immer die MBI. Sie
+    verstärken oder verringern aber die Präsenz im AUI.
+13. Eine Erfahrung und eine Emotion sind grundsätzlich eigene Themen. Sie
+    können aber verstärkt zusammen auftauchen.
 
-Bewusst zurückgestellt: Gewohnheitsbildung, weitere Bausteine wie Emotion
-oder Körper.
+Festgehalten, aber noch nicht eingebaut: Körperzustände wie Müdigkeit oder
+Anspannung können sich darauf auswirken, wie viele Impulse das AUI erzeugt.
+Im Programm sind sie vorerst unabhängige eigene Themen.
 
 ## 3. Vorläufige Annahmen im Programm
 
@@ -105,6 +122,37 @@ stammt von mir, im Modell hat diese Dreiheit noch keinen eigenen Namen:
 - **Themenwechsel in die Sinne oder die jetzige Erfahrung:** Auch dorthin
   kommt die MBI durch einen Themenwechsel.
 - **Themenerhalt:** Tut die MBI nichts, bleibt sie in ihren Gebieten.
+
+Zur Gewohnheit:
+
+- **Was gezählt wird:** pro Thema, wie oft die MBI dazu engaged hat, abzüglich
+  der Male, die sie disengaged hat.
+- **Wie sie wirkt:** Jede neue Erfahrung zu einem gewohnten Thema verblasst
+  langsamer: ohne Gewohnheit um den Faktor 0,8 pro Moment, nach einem engage
+  um 0,86, nach dreien um 0,91. Überwiegt disengage, verblasst sie schneller.
+- **Nicht rückwirkend:** Die Gewohnheit wirkt auf Erfahrungen, die ab dann
+  dazukommen. Was schon im AUI liegt, verblasst weiter wie bisher.
+- **Leichteres Auftauchen** ist keine eigene Regel, sondern folgt daraus:
+  Was langsamer verblasst, sammelt sich an und bleibt länger im Feld der ABI.
+
+Zu Emotion und Körper:
+
+- **Woher sie kommen:** Wie Sinneseindrücke werden Emotionen und
+  Körperempfindungen pro Moment von außen eingegeben und gehen ins AUI. Sie
+  gehören jeweils zu ihrem eigenen Gebiet, egal wo die MBI gerade ist.
+- **Keine frühere Haltung:** Wie die Sinne tauchen Emotion und Körper nicht
+  als frühere Haltung auf. Die MBI kommt durch einen Themenwechsel dorthin.
+
+Zum gemeinsamen Auftauchen:
+
+- **Wann sich Themen verknüpfen:** wenn sie im selben Moment erlebt werden,
+  egal in welchen Gebieten. Das gilt nicht nur für Emotion und Erfahrung.
+- **Wie stark die Bindung ist:** Sie wächst mit jedem gemeinsamen Erleben,
+  nach einem Mal auf 0,5, nach zweien auf 0,75.
+- **Was sie bewirkt:** Jedes Thema bekommt die Hälfte der Stärke seines
+  Partners, mal die Bindung, dazu. Das zieht auch ein Thema mit, das sonst
+  verklungen wäre. Im AUI wird dadurch nichts dauerhaft verstärkt.
+- **Ab wann:** ab dem Moment nach dem gemeinsamen Erleben.
 
 Zur Kapazität der MBI:
 

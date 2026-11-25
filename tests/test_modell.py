@@ -1,4 +1,6 @@
 from geist import (
+    EMOTION,
+    KOERPER,
     ERINNERUNG,
     JETZIGE_ERFAHRUNG,
     SINNE,
@@ -696,3 +698,165 @@ def test_ein_gebiet_ohne_eigenes_thema_wiegt_so_viel_wie_sein_staerkstes_anderes
     # Die Sorge zählt schon als eigenes Gebiet, also bleibt für die Familie der Streit.
     assert unterbewusstsein.gewicht("Familie", ["Familie", "Sorge"]) == 0.3
     assert unterbewusstsein.gewicht("Familie", ["Familie"]) == 0.8
+
+
+# --- Gewohnheit: Wiederholtes engage prägt ein Thema ---
+
+
+def test_engage_macht_ein_thema_zur_gewohnheit_und_disengage_baut_sie_ab():
+    plan = {
+        0: Entscheidung({"Thema": Umgang.ENGAGE}),
+        1: Entscheidung({"Thema": Umgang.ENGAGE}),
+        2: Entscheidung({"Thema": Umgang.DISENGAGE}),
+    }
+    geist = geist_mit(nach_plan(plan), erfahrungen=[erfahrung("Thema", 0.8)])
+    verlauf = []
+    for _ in range(3):
+        geist.schritt()
+        verlauf.append(geist.unterbewusstsein.gewohnheit["Thema"])
+
+    assert verlauf == [1, 2, 1]
+
+
+def test_engage_und_disengage_geschehen_nie_von_allein():
+    geist = geist_mit(erfahrungen=[erfahrung("Thema", 0.8)], chance=1.0)
+    for _ in range(3):
+        assert geist.schritt().umgang == {}
+    assert geist.unterbewusstsein.gewohnheit == {}
+    assert len(geist.unterbewusstsein.erfahrungen) == 1
+
+
+def test_je_oefter_engaged_desto_langsamer_verblasst_das_thema():
+    unterbewusstsein = Unterbewusstsein(nachklang=0.8)
+    unterbewusstsein.gewohnheit = {"Oft": 3, "Einmal": 1, "Abgewöhnt": -2}
+    nachklang = unterbewusstsein.nachklang_fuer
+
+    assert nachklang("Oft") > nachklang("Einmal") > nachklang("Nie") == 0.8
+    assert nachklang("Abgewöhnt") < 0.8
+
+
+def test_gewohnheit_wirkt_auf_neue_erfahrungen_nicht_auf_fruehere():
+    unterbewusstsein = Unterbewusstsein(nachklang=0.8)
+    unterbewusstsein.erlebe(erfahrung("Thema", 0.5))
+    unterbewusstsein.uebe("Thema", 1)
+    unterbewusstsein.erlebe(erfahrung("Thema", 0.5))
+    vorher, nachher = unterbewusstsein.erfahrungen
+
+    assert vorher.nachklang == 0.8
+    assert nachher.nachklang > 0.8
+
+
+def test_ein_gewohntes_thema_bleibt_laenger_im_feld_der_abi():
+    def momente_im_feld(engagements):
+        plan = {zeit: Entscheidung({"Thema": Umgang.ENGAGE}) for zeit in range(engagements)}
+        geist = geist_mit(nach_plan(plan), erfahrungen=[erfahrung("Thema", 0.8)])
+        return sum("Thema" in im_feld(geist.schritt()) for _ in range(40))
+
+    assert momente_im_feld(3) > momente_im_feld(1) > momente_im_feld(0)
+
+
+def test_der_impuls_zeigt_die_gewohnheit():
+    geist = geist_mit(immer(Umgang.ENGAGE), erfahrungen=[erfahrung("Thema", 0.8)])
+    geist.schritt()
+    assert impuls(geist.schritt(), "Thema").gewohnheit == 1
+
+
+# --- Emotion und Körper: zwei eigene Gebiete mit eigenen Themen ---
+
+
+def test_emotionen_und_koerperempfindungen_gehoeren_zu_ihrem_eigenen_gebiet():
+    geist = geist_mit(gebiet="Arbeit")
+    geist.schritt({"Laerm": 0.5}, {"Angst": 0.5}, {"Enge": 0.5})
+    assert [(e.thema, e.gebiete) for e in geist.unterbewusstsein.erfahrungen] == [
+        ("Laerm", (SINNE,)),
+        ("Angst", (EMOTION,)),
+        ("Enge", (KOERPER,)),
+    ]
+
+
+def test_in_der_emotion_zaehlt_eine_emotion_voll_sonst_kommt_sie_nur_mit():
+    in_der_emotion = impuls(geist_mit(gebiet=EMOTION).schritt(emotion={"Angst": 0.6}), "Angst")
+    in_der_arbeit = impuls(geist_mit(gebiet="Arbeit").schritt(emotion={"Angst": 0.6}), "Angst")
+
+    assert (in_der_emotion.staerke, in_der_emotion.mitgebracht_aus) == (0.6, ())
+    assert (in_der_arbeit.staerke, in_der_arbeit.mitgebracht_aus) == (0.3, (EMOTION,))
+
+
+def test_emotion_und_koerper_sind_zwei_verschiedene_gebiete():
+    moment = geist_mit(gebiet=KOERPER).schritt(emotion={"Angst": 0.6}, koerper={"Enge": 0.6})
+
+    assert impuls(moment, "Enge").mitgebracht_aus == ()
+    assert impuls(moment, "Angst").mitgebracht_aus == (EMOTION,)
+
+
+def test_emotion_und_koerper_tauchen_nicht_als_fruehere_haltung_auf():
+    moment = geist_mit(gebiet="Arbeit").schritt(emotion={"Angst": 0.9}, koerper={"Enge": 0.9})
+    assert haltungen_im_feld(moment) == []
+
+
+def test_mbi_kann_eine_emotion_aufgreifen_wenn_sie_stark_genug_auftaucht():
+    geist = geist_mit(immer(Umgang.ENGAGE, "Angst"), "Arbeit")
+    zu_schwach = geist_mit(immer(Umgang.ENGAGE, "Angst"), "Arbeit").schritt(emotion={"Angst": 0.4})
+    stark_genug = geist.schritt(emotion={"Angst": 0.8})
+
+    assert zu_schwach.umgang == {}
+    assert stark_genug.umgang == {"Angst": Umgang.ENGAGE}
+    assert stark_genug.gebiete_danach == ("Angst",)
+
+
+# --- Was zusammen erlebt wurde, taucht verstärkt zusammen auf ---
+
+
+def aui_mit_streit(gemeinsam_erlebt):
+    unterbewusstsein = Unterbewusstsein(kopplung=0.5)
+    unterbewusstsein.erlebe(Erfahrung("Streit", 0.8, 0, (SINNE,)))
+    for _ in range(gemeinsam_erlebt):
+        unterbewusstsein.verknuepfe(["Streit", "Wut"])
+    return unterbewusstsein
+
+
+def staerke_im_aui(unterbewusstsein, thema):
+    feld = unterbewusstsein.erzeuge_impulse(0, [SINNE])
+    return next((i.staerke for i in feld if i.thema == thema), 0.0)
+
+
+def test_was_im_selben_moment_erlebt_wird_verknuepft_sich():
+    geist = geist_mit(gebiet=SINNE)
+    geist.schritt({"Streit": 0.9}, {"Wut": 0.7})
+    assert geist.unterbewusstsein.verknuepfungen == {frozenset({"Streit", "Wut"}): 1}
+
+
+def test_ein_verknuepftes_thema_taucht_mit_auf():
+    assert staerke_im_aui(aui_mit_streit(gemeinsam_erlebt=0), "Wut") == 0.0
+    assert staerke_im_aui(aui_mit_streit(gemeinsam_erlebt=1), "Wut") == 0.2
+
+
+def test_je_oefter_zusammen_erlebt_desto_staerker_die_bindung():
+    einmal = staerke_im_aui(aui_mit_streit(gemeinsam_erlebt=1), "Wut")
+    zweimal = staerke_im_aui(aui_mit_streit(gemeinsam_erlebt=2), "Wut")
+    assert zweimal > einmal
+
+
+def test_beide_bleiben_eigene_themen_in_eigenen_gebieten():
+    geist = geist_mit(gebiet=SINNE)
+    geist.schritt({"Streit": 0.9}, {"Wut": 0.7})
+    moment = geist.schritt()
+
+    assert impuls(moment, "Streit").mitgebracht_aus == ()
+    assert impuls(moment, "Wut").mitgebracht_aus == (EMOTION,)
+
+
+def test_das_mit_auftauchen_hinterlaesst_keine_erfahrung():
+    unterbewusstsein = aui_mit_streit(gemeinsam_erlebt=2)
+    unterbewusstsein.erzeuge_impulse(0, [SINNE])
+    assert [e.thema for e in unterbewusstsein.erfahrungen] == ["Streit"]
+
+
+def test_verklungenes_taucht_wieder_auf_wenn_sein_partner_auftaucht():
+    geist = geist_mit(gebiet=SINNE)
+    geist.schritt({"Streit": 0.9}, {"Wut": 0.7})
+    verklungen = [geist.schritt() for _ in range(5)][-1]
+    wieder_da = geist.schritt({"Streit": 0.9})
+
+    assert "Wut" not in im_feld(verklungen)
+    assert "Wut" in im_feld(wieder_da)

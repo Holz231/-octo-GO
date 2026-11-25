@@ -1,4 +1,6 @@
 from .modell import (
+    EMOTION,
+    KOERPER,
     ERINNERUNG,
     JETZIGE_ERFAHRUNG,
     SINNE,
@@ -15,6 +17,8 @@ from .modell import (
 )
 
 __all__ = [
+    "EMOTION",
+    "KOERPER",
     "ERINNERUNG",
     "JETZIGE_ERFAHRUNG",
     "SINNE",
