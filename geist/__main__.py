@@ -86,6 +86,8 @@ def zeige(moment: Moment, schwelle: float) -> None:
     else:
         print("  (nichts)")
 
+    if moment.verdraengt:
+        print(f"  → Zu viel für die MBI, verdrängt wird: {benenne(moment.verdraengt)}")
     if moment.gebiete_danach != moment.gebiete:
         print(f"  → Neue Haltung der MBI: {benenne(moment.gebiete_danach)}")
     for gebiet in moment.gebiete_ohne_mbi_danach:
@@ -159,14 +161,14 @@ def demo_erinnerung() -> None:
     aber ihr Thema in die Erinnerung wechseln. Dort zählt Früheres unverblasst,
     der Streit taucht in der ABI auf, und erst jetzt ist engage möglich. Weil
     der Streit aus der Erinnerung stammt, in der die MBI gerade ist, läuft er
-    als Themengebiet parallel zu ihr. Wechselt die MBI danach ganz zum Streit,
-    bleibt von ihm, was das Engage im AUI verstärkt hat. Themengebiete ohne die
-    MBI sind hier abgeschaltet.
+    als Themengebiet parallel zu ihr. Dann ist er so stark, dass er die
+    Kapazität der MBI allein füllt und die Erinnerung verdrängt. Übrig bleibt
+    von ihm, was das Engage im AUI verstärkt hat. Themengebiete ohne die MBI
+    sind hier abgeschaltet.
     """
     ablauf = {
         0: Entscheidung(themenwechsel=ERINNERUNG),
         1: Entscheidung({"Streit": Umgang.ENGAGE}),
-        2: Entscheidung(themenwechsel="Streit"),
     }
     geist = Geist(
         lambda lage: ablauf.get(geist.zeit, Entscheidung()),
@@ -188,7 +190,10 @@ def demo_haltung() -> None:
     Haltung, und die Sorge zählt wieder voll. Der Wechsel ist nicht total: Die
     Arbeit liegt jetzt als frühere Haltung im AUI. Dann engaged die MBI zur
     Sorge. Die stammt aus der jetzigen Haltung, also läuft sie parallel zur
-    Familie. Themengebiete ohne die MBI sind hier abgeschaltet.
+    Familie. Einen Moment später ist die Sorge so stark, dass beides nicht
+    mehr in die Kapazität der MBI passt: Die Familie wird verdrängt und liegt
+    ihrerseits als frühere Haltung im AUI. Themengebiete ohne die MBI sind
+    hier abgeschaltet.
     """
     ablauf = {
         1: Entscheidung({"Familie": Umgang.ENGAGE}),

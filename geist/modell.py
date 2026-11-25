@@ -28,6 +28,9 @@ Die drei Arten, wie die MBI mit einem solchen Thema umgeht:
   läuft es parallel zu ihr. Kommt es aus einem anderen Gebiet, ersetzt es sie.
   Der Wechsel ist dabei nicht total, weil die vorherige Haltung dann im AUI
   liegt und von dort wieder auftauchen kann.
+  Die MBI hat außerdem eine begrenzte Kapazität. Jedes Gebiet, das sie hält,
+  verbraucht davon so viel, wie sein Thema gerade stark ist. Wird ein Thema zu
+  stark, verdrängt es die anderen, ohne dass die MBI das entscheidet.
 - disengage schwächt das Thema im AUI und verhindert, dass die MBI es zu einem
   Themengebiet macht.
 - weder noch verstärkt nicht und schwächt nicht. Es lässt aber die Chance, dass
@@ -171,6 +174,9 @@ class Unterbewusstsein:
         self.mitnahme = mitnahme
         self.erfahrungen: list[Erfahrung] = []
         self.feld: list[Impuls] = []
+        # Stand der letzten Impulse, für das Gewicht der Gebiete der MBI.
+        self._staerken: dict[str, float] = {}  # Thema -> Stärke
+        self._eigene: dict[str, dict[str, float]] = {}  # Gebiet -> Thema -> Stärke
 
     def erlebe(self, erfahrung: Erfahrung) -> None:
         self.erfahrungen.append(erfahrung)
@@ -191,6 +197,7 @@ class Unterbewusstsein:
         haltung = gebiete if haltung is None else haltung
         staerken: dict[str, float] = {}
         aus_haltung: dict[str, float] = {}  # Thema -> Stärke aus der Haltung der MBI
+        eigene: dict[str, dict[str, float]] = {}  # Gebiet der MBI -> Thema -> Stärke
         herkunft: dict[str, dict[str, float]] = {}  # Thema -> Gebiet -> Stärke
         enthalten: dict[str, dict[str, float]] = {}  # Haltung -> Thema -> Stärke
         for e in self.erfahrungen:
@@ -206,11 +213,17 @@ class Unterbewusstsein:
                 if mitgefuehrt:
                     beitrag *= self.mitnahme
             staerken[e.thema] = staerken.get(e.thema, 0.0) + beitrag
-            if any(
-                (g == ERINNERUNG and e.zeit < zeit) or gehoert_zum_gebiet(e, g, im_abi_feld)
+            zugehoerig = [
+                g
                 for g in haltung
-            ):
+                if (g == ERINNERUNG and e.zeit < zeit)
+                or gehoert_zum_gebiet(e, g, im_abi_feld)
+            ]
+            if zugehoerig:
                 aus_haltung[e.thema] = aus_haltung.get(e.thema, 0.0) + beitrag
+            for g in zugehoerig:
+                je_thema = eigene.setdefault(g, {})
+                je_thema[e.thema] = je_thema.get(e.thema, 0.0) + beitrag
             for g in e.gebiete:
                 if mitgefuehrt:
                     name = g if g not in gebiete else FRUEHER
@@ -246,14 +259,36 @@ class Unterbewusstsein:
 
         # Eine Haltung, die das AUI enthält, liegt selbst als Impuls im Feld.
         # ANNAHME: Sie ist so stark wie das stärkste Thema, das sie enthält.
-        vorhanden = {impuls.thema for impuls in impulse}
-        for haltung, je_thema in enthalten.items():
+        # Gibt es zugleich ein Thema dieses Namens, zählt das Stärkere von beiden.
+        themen = {impuls.thema: impuls for impuls in impulse}
+        for frueher, je_thema in enthalten.items():
             staerke = max(je_thema.values())
-            if haltung not in vorhanden and staerke >= MINDESTSTAERKE:
-                impulse.append(Impuls(haltung, min(1.0, staerke), haltung=True))
+            if frueher in themen:
+                staerke = max(staerke, themen[frueher].staerke)
+            if staerke >= MINDESTSTAERKE:
+                themen[frueher] = Impuls(frueher, min(1.0, staerke), haltung=True)
 
-        self.feld = sorted(impulse, key=lambda i: i.staerke, reverse=True)
+        self.feld = sorted(themen.values(), key=lambda i: i.staerke, reverse=True)
+        self._staerken = {i.thema: i.staerke for i in self.feld}
+        self._eigene = eigene
         return self.feld
+
+    def gewicht(self, gebiet: str, gebiete: Collection[str]) -> float:
+        """Wie viel Kapazität der MBI ein Gebiet gerade verbraucht.
+
+        `gebiete` sind alle Gebiete, die die MBI hält.
+        """
+        # ANNAHME: Ein Gebiet wiegt so viel, wie sein eigenes Thema stark ist.
+        # Hat es keines, wiegt es so viel wie das stärkste Thema darin, das
+        # die MBI nicht ohnehin als eigenes Gebiet hält.
+        if gebiet in self._staerken:
+            return self._staerken[gebiet]
+        andere = [
+            staerke
+            for thema, staerke in self._eigene.get(gebiet, {}).items()
+            if thema not in gebiete
+        ]
+        return min(1.0, max(andere, default=0.0))
 
 
 class AutomatischeBewussteIntention:
@@ -354,6 +389,32 @@ class ManuelleBewussteIntention:
             self.gebiete = [JETZIGE_ERFAHRUNG]
         return umgang
 
+    def verdraenge(
+        self,
+        gewicht: Callable[[str, Collection[str]], float],
+        kapazitaet: float,
+        geschuetzt: Collection[str] = (),
+    ) -> list[str]:
+        """Gibt Gebiete auf, bis die übrigen in die Kapazität passen.
+
+        Das geschieht ohne Entscheidung der MBI. Gibt die verdrängten Gebiete
+        zurück.
+        """
+        verdraengt = []
+        while len(self.gebiete) > 1:
+            gewichte = {g: gewicht(g, self.gebiete) for g in self.gebiete}
+            if sum(gewichte.values()) < kapazitaet:
+                break
+            # ANNAHME: Zuerst geht das schwächste Gebiet. Was die MBI in diesem
+            # Moment erst betreten hat, bleibt.
+            kandidaten = [g for g in self.gebiete if g not in geschuetzt]
+            if not kandidaten:
+                break
+            schwaechstes = min(kandidaten, key=gewichte.__getitem__)
+            self.gebiete.remove(schwaechstes)
+            verdraengt.append(schwaechstes)
+        return verdraengt
+
 
 @dataclass(frozen=True)
 class Moment:
@@ -366,6 +427,7 @@ class Moment:
     aui_feld: tuple[Impuls, ...]  # alles, was im Feld des AUI liegt
     abi_feld: tuple[Impuls, ...]  # der Teil, der auch im Feld der ABI auftaucht
     umgang: Mapping[str, Umgang]  # Thema -> Umgang der MBI
+    verdraengt: tuple[str, ...]  # Gebiete, die nicht mehr in die Kapazität passten
     # Die Gebiete, wie sie ab dem nächsten Moment gelten.
     gebiete_danach: tuple[str, ...]
     gebiete_ohne_mbi_danach: tuple[str, ...]
@@ -379,6 +441,7 @@ class Geist:
         entscheider: Entscheider,
         gebiet: str,
         *,
+        kapazitaet: float = 1.0,
         nachklang: float = 0.8,
         mitnahme: float = 0.5,
         schwelle: float = 0.3,
@@ -390,6 +453,8 @@ class Geist:
         self.automatisch = AutomatischeBewussteIntention(schwelle, chance, zufall)
         self.manuell = ManuelleBewussteIntention(entscheider, gebiet)
         self.wirkung = wirkung
+        # ANNAHME: Die Kapazität der MBI entspricht einem Thema in voller Stärke.
+        self.kapazitaet = kapazitaet
         self.zeit = 0
 
     def schritt(self, sinne: Mapping[str, float] | None = None) -> Moment:
@@ -424,6 +489,11 @@ class Geist:
                 # Die Erfahrung enthält die Haltung, in der die MBI dabei war.
                 self.unterbewusstsein.erlebe(Erfahrung(thema, wirkung, self.zeit, gebiete))
 
+        gerade_betreten = [g for g in self.manuell.gebiete if g not in gebiete]
+        verdraengt = self.manuell.verdraenge(
+            self.unterbewusstsein.gewicht, self.kapazitaet, gerade_betreten
+        )
+
         self.automatisch.lasse_gebiete_entstehen(umgang, self.manuell.gebiete)
 
         moment = Moment(
@@ -434,6 +504,7 @@ class Geist:
             tuple(aui_feld),
             lage.abi_feld,
             umgang,
+            tuple(verdraengt),
             tuple(self.manuell.gebiete),
             tuple(self.automatisch.gebiete_ohne_mbi),
         )

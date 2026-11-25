@@ -5,6 +5,7 @@ from geist import (
     Entscheidung,
     Erfahrung,
     Geist,
+    ManuelleBewussteIntention,
     Umgang,
     Unterbewusstsein,
 )
@@ -595,3 +596,103 @@ def test_eine_haltung_wird_nicht_ohne_die_mbi_zum_gebiet():
 def test_sinne_tauchen_nicht_als_fruehere_haltung_auf():
     moment = geist_mit(gebiet="Arbeit").schritt({"Laerm": 0.9})
     assert [i.thema for i in moment.aui_feld] == ["Laerm"]
+
+
+# --- Die Kapazität der MBI: Ein zu starkes Thema verdrängt die anderen ---
+
+
+def mbi_mit(*gebiete):
+    mbi = ManuelleBewussteIntention(nichts, gebiete[0])
+    mbi.gebiete = list(gebiete)
+    return mbi
+
+
+def test_solange_alles_hineinpasst_laeuft_es_parallel():
+    geist = geist_mit(
+        nach_plan({0: Entscheidung({"Sorge": Umgang.ENGAGE})}),
+        "Familie",
+        [erfahrung("Sorge", 0.5, "Familie")],
+        nachklang=1.0,
+    )
+    geist.schritt()
+    moment = geist.schritt()
+
+    assert staerke(moment, "Sorge") == 0.9
+    assert (moment.verdraengt, moment.gebiete_danach) == ((), ("Familie", "Sorge"))
+
+
+def test_ein_zu_starkes_thema_verdraengt_die_anderen_ohne_die_mbi():
+    geist = geist_mit(
+        nach_plan({0: Entscheidung({"Sorge": Umgang.ENGAGE})}),
+        "Familie",
+        SORGE_AUS_DER_FAMILIE,
+        nachklang=1.0,
+    )
+    geist.schritt()
+    moment = geist.schritt()
+
+    assert staerke(moment, "Sorge") == 1.0
+    assert moment.umgang == {}
+    assert (moment.verdraengt, moment.gebiete_danach) == (("Familie",), ("Sorge",))
+
+
+def test_mit_mehr_kapazitaet_wird_nichts_verdraengt():
+    geist = geist_mit(
+        nach_plan({0: Entscheidung({"Sorge": Umgang.ENGAGE})}),
+        "Familie",
+        SORGE_AUS_DER_FAMILIE,
+        nachklang=1.0,
+        kapazitaet=2.0,
+    )
+    geist.schritt()
+    assert geist.schritt().verdraengt == ()
+
+
+def test_die_verdraengte_haltung_liegt_danach_im_aui():
+    geist = geist_mit(
+        nach_plan({0: Entscheidung({"Sorge": Umgang.ENGAGE})}),
+        "Familie",
+        SORGE_AUS_DER_FAMILIE,
+        nachklang=1.0,
+    )
+    for _ in range(2):
+        geist.schritt()
+    assert haltungen_im_feld(geist.schritt()) == ["Familie"]
+
+
+def test_zuerst_wird_das_schwaechste_gebiet_verdraengt():
+    gewichte = {"A": 0.2, "B": 0.5, "C": 0.6}
+    mbi = mbi_mit("A", "B", "C")
+
+    verdraengt = mbi.verdraenge(lambda gebiet, alle: gewichte[gebiet], kapazitaet=1.0)
+
+    assert (verdraengt, mbi.gebiete) == (["A", "B"], ["C"])
+
+
+def test_was_die_mbi_gerade_erst_betreten_hat_wird_nicht_verdraengt():
+    gewichte = {"A": 0.2, "B": 0.5, "C": 0.6}
+    mbi = mbi_mit("A", "B", "C")
+
+    verdraengt = mbi.verdraenge(
+        lambda gebiet, alle: gewichte[gebiet], kapazitaet=1.0, geschuetzt=["A"]
+    )
+
+    assert (verdraengt, mbi.gebiete) == (["B"], ["A", "C"])
+
+
+def test_ein_einzelnes_gebiet_wird_nie_verdraengt():
+    mbi = mbi_mit("A")
+    assert mbi.verdraenge(lambda gebiet, alle: 1.0, kapazitaet=1.0) == []
+    assert mbi.gebiete == ["A"]
+
+
+def test_ein_gebiet_ohne_eigenes_thema_wiegt_so_viel_wie_sein_staerkstes_anderes_thema():
+    unterbewusstsein = Unterbewusstsein()
+    unterbewusstsein.erlebe(erfahrung("Sorge", 0.8, "Familie"))
+    unterbewusstsein.erlebe(erfahrung("Streit", 0.3, "Familie"))
+    unterbewusstsein.erzeuge_impulse(0, ["Familie", "Sorge"])
+
+    assert unterbewusstsein.gewicht("Sorge", ["Familie", "Sorge"]) == 0.8
+    # Die Sorge zählt schon als eigenes Gebiet, also bleibt für die Familie der Streit.
+    assert unterbewusstsein.gewicht("Familie", ["Familie", "Sorge"]) == 0.3
+    assert unterbewusstsein.gewicht("Familie", ["Familie"]) == 0.8

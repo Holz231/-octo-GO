@@ -54,7 +54,11 @@ Festgelegt:
      neuen Themengebiet, in dem sie agiert. Stammt das neue Thema aus der
      jetzigen Haltung, läuft es parallel. Kommt es aus einem anderen Gebiet,
      ersetzt es sie. Der Wechsel ist dabei nicht total, weil das Vorherige
-     dann im AUI auftaucht.
+     dann im AUI auftaucht. Die MBI hat außerdem eine begrenzte Kapazität:
+     Jedes Gebiet, das sie hält, verbraucht davon so viel, wie sein Thema
+     gerade stark ist. Solange alles hineinpasst, läuft es parallel. Wird
+     ein Thema zu stark, verdrängt es die anderen, und zwar ohne Entscheidung
+     der MBI.
    - **disengage** schwächt das Thema im AUI und verhindert, dass die MBI es zu
      einem neuen Themengebiet in der ABI macht.
    - **weder noch** („non disengage and non engage“) verstärkt nicht und
@@ -73,8 +77,8 @@ Festgelegt:
 11. Das AUI kann die Haltung beeinflussen: Enthält es eine Haltung, kann diese
     ins Bewusstsein auftauchen, und die MBI kann dann darauf engagen.
 
-Bewusst zurückgestellt: Grenzen der MBI (Aufmerksamkeit, Energie),
-Gewohnheitsbildung, weitere Bausteine wie Emotion oder Körper.
+Bewusst zurückgestellt: Gewohnheitsbildung, weitere Bausteine wie Emotion
+oder Körper.
 
 ## 3. Vorläufige Annahmen im Programm
 
@@ -101,6 +105,19 @@ stammt von mir, im Modell hat diese Dreiheit noch keinen eigenen Namen:
 - **Themenwechsel in die Sinne oder die jetzige Erfahrung:** Auch dorthin
   kommt die MBI durch einen Themenwechsel.
 - **Themenerhalt:** Tut die MBI nichts, bleibt sie in ihren Gebieten.
+
+Zur Kapazität der MBI:
+
+- **Wie groß sie ist:** so groß wie ein Thema in voller Stärke (1,0). Erreicht
+  das Gewicht aller Gebiete diesen Wert, wird verdrängt.
+- **Was ein Gebiet wiegt:** so viel, wie sein eigenes Thema stark ist. Ein
+  Gebiet ohne eigenes Thema, etwa Familie oder die Sinne, wiegt so viel wie
+  das stärkste Thema darin, das die MBI nicht schon als eigenes Gebiet hält.
+- **Wer verdrängt wird:** zuerst das schwächste Gebiet, dann das nächste, bis
+  der Rest hineinpasst. Ein einzelnes Gebiet bleibt immer. Was die MBI in
+  diesem Moment erst betreten hat, wird nicht verdrängt.
+- **Wohin das Verdrängte geht:** Es liegt wie jede verlassene Haltung im AUI
+  und kann von dort wieder auftauchen.
 
 Zu den Erinnerungen:
 
