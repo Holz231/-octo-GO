@@ -10,8 +10,8 @@ AUI und ABI sind zwei verschiedene, aneinander angrenzende Felder.
 
 Die MBI bewegt sich immer in einem bestimmten Gebiet, je nachdem auch in
 mehreren zugleich. Ein Gebiet kann ein Themengebiet sein (davon gibt es
-unendlich viele), die jetzige Erfahrung, die Sinne oder die Erinnerung. Die
-jetzige Erfahrung ist alles, was im Feld der ABI auftaucht. An den Gebieten orientieren sich AUI
+unendlich viele), die jetzige Erfahrung, die Sinne, die Erinnerung oder die
+Haltung. Die jetzige Erfahrung ist alles, was im Feld der ABI auftaucht. An den Gebieten orientieren sich AUI
 und ABI. Das AUI führt aber vergangene Themen und Erfahrungen mit in jedes neue
 Gebiet. Wie die MBI und das AUI gerade sind, formt gleichzeitig die
 wahrgenommene Realität der ABI.
@@ -59,11 +59,12 @@ from typing import Callable, Collection, Mapping
 # Schwächere Impulse gelten als nicht vorhanden.
 MINDESTSTAERKE = 0.01
 
-# Drei besondere Gebiete, in denen sich die MBI bewegen kann. Jeder andere Name
+# Vier besondere Gebiete, in denen sich die MBI bewegen kann. Jeder andere Name
 # steht für ein Themengebiet.
 SINNE = "Sinne"
 JETZIGE_ERFAHRUNG = "jetzige Erfahrung"
 ERINNERUNG = "Erinnerung"
+HALTUNG = "Haltung"
 
 # Herkunft von etwas, das in der jetzigen Erfahrung entstanden ist, aber nicht
 # mehr im Feld der ABI auftaucht.
@@ -266,7 +267,7 @@ class ManuelleBewussteIntention:
     """MBI. Manuell und bewusst: was man willentlich lenkt.
 
     Sie agiert immer in mindestens einem Gebiet: in einem Themengebiet, in der
-    jetzigen Erfahrung, in den Sinnen oder in der Erinnerung. Sie kann ihr Thema autonom wechseln,
+    jetzigen Erfahrung, in den Sinnen, in der Erinnerung oder in der Haltung. Sie kann ihr Thema autonom wechseln,
     auch zu einem Themengebiet, das vorher nicht im Bewusstsein war. Engage und
     disengage gibt es dagegen nur zu dem, was im Feld der ABI auftaucht. Das
     Feld des AUI bekommt sie nie zu sehen.
@@ -372,8 +373,12 @@ class Geist:
                 wirkung = max(wirkung, -lage.staerke(thema))
             if wirkung:
                 # ANNAHME: Die Erfahrung gehört zu den Gebieten, in denen die MBI
-                # agiert hat, als sie die Haltung einnahm.
-                self.unterbewusstsein.erlebe(Erfahrung(thema, wirkung, self.zeit, gebiete))
+                # agiert hat, als sie die Haltung einnahm, und außerdem zum
+                # Gebiet der Haltung.
+                zugehoerig = tuple(dict.fromkeys(gebiete + (HALTUNG,)))
+                self.unterbewusstsein.erlebe(
+                    Erfahrung(thema, wirkung, self.zeit, zugehoerig)
+                )
 
         self.automatisch.lasse_gebiete_entstehen(haltungen, self.manuell.gebiete)
 

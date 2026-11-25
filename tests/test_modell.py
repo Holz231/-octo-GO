@@ -1,5 +1,6 @@
 from geist import (
     ERINNERUNG,
+    HALTUNG,
     JETZIGE_ERFAHRUNG,
     SINNE,
     Entscheidung,
@@ -176,7 +177,7 @@ def test_engage_gehoert_zu_den_gebieten_in_denen_die_mbi_agiert_hat():
     geist = geist_mit(immer(Haltung.ENGAGE, "Mail"), "Arbeit", [erfahrung("Mail", 0.5, "Arbeit")])
     geist.schritt()
     neu = geist.unterbewusstsein.erfahrungen[-1]
-    assert (neu.thema, neu.staerke, neu.gebiete) == ("Mail", 0.4, ("Arbeit",))
+    assert (neu.thema, neu.staerke, neu.gebiete) == ("Mail", 0.4, ("Arbeit", HALTUNG))
 
 
 # --- Disengage: schwächt im AUI und verhindert das Themengebiet ---
@@ -495,3 +496,30 @@ def test_in_der_erinnerung_ist_engage_moeglich():
 
     assert moment.haltungen == {"Streit": Haltung.ENGAGE}
     assert moment.gebiete_danach == ("Streit",)
+
+
+# --- Die Haltung als Gebiet ---
+
+
+def test_mbi_kann_ihr_thema_in_die_haltung_wechseln():
+    geist = geist_mit(nach_plan({0: Entscheidung(themenwechsel=HALTUNG)}), "Arbeit")
+    assert geist.schritt().gebiete_danach == (HALTUNG,)
+
+
+def test_engage_und_disengage_gehoeren_auch_zum_gebiet_der_haltung():
+    for haltung, wirkung in ((Haltung.ENGAGE, 0.4), (Haltung.DISENGAGE, -0.4)):
+        geist = geist_mit(immer(haltung, "Sorge"), "Arbeit", SORGE_AUS_DER_FAMILIE)
+        geist.schritt()
+        neu = geist.unterbewusstsein.erfahrungen[-1]
+        assert (neu.staerke, neu.gebiete) == (wirkung, ("Arbeit", HALTUNG))
+
+
+def test_in_der_haltung_zaehlt_voll_wozu_die_mbi_eine_haltung_eingenommen_hat():
+    unterbewusstsein = Unterbewusstsein()
+    unterbewusstsein.erlebe(Erfahrung("Engaged", 0.4, 0, ("Arbeit", HALTUNG)))
+    unterbewusstsein.erlebe(Erfahrung("Nur erlebt", 0.4, 0, ("Arbeit",)))
+
+    engaged, nur_erlebt = unterbewusstsein.erzeuge_impulse(0, [HALTUNG])
+
+    assert (engaged.thema, engaged.staerke, engaged.mitgebracht_aus) == ("Engaged", 0.4, ())
+    assert (nur_erlebt.staerke, nur_erlebt.mitgebracht_aus) == (0.2, ("Arbeit",))

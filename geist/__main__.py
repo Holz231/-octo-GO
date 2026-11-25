@@ -15,6 +15,7 @@ import random
 
 from .modell import (
     ERINNERUNG,
+    HALTUNG,
     JETZIGE_ERFAHRUNG,
     SINNE,
     Entscheidung,
@@ -32,12 +33,13 @@ BESONDERE_GEBIETE = {
     "jetzt": JETZIGE_ERFAHRUNG,
     "jetzige erfahrung": JETZIGE_ERFAHRUNG,
     "erinnerung": ERINNERUNG,
+    "haltung": HALTUNG,
 }
 
 
 def benenne(gebiete: tuple[str, ...]) -> str:
     namen = [
-        g if g in (SINNE, JETZIGE_ERFAHRUNG, ERINNERUNG) else f"Themengebiet {g}" for g in gebiete
+        g if g in BESONDERE_GEBIETE.values() else f"Themengebiet {g}" for g in gebiete
     ]
     return " + ".join(namen)
 
@@ -252,8 +254,8 @@ def interaktiv(mehrere: bool) -> None:
     print("   'd Thema'  disengage: schwächt das Thema, es ist kein Gebiet von dir mehr.")
     print("              Beides geht nur zu Themen, die im ABI-Feld auftauchen.")
     print("   'g Gebiet' Themenwechsel, ohne etwas zu verstärken: in ein beliebiges")
-    print("              Themengebiet, 'sinne', 'jetzt' (die jetzige Erfahrung) oder")
-    print("              'erinnerung'.")
+    print("              Themengebiet, 'sinne', 'jetzt' (die jetzige Erfahrung),")
+    print("              'erinnerung' oder 'haltung'.")
     print("   Leer = Themenerhalt und weder noch: Dann kann ein Thema im ABI-Feld")
     print("   von selbst zum Themengebiet werden.")
     try:

@@ -38,12 +38,13 @@ Festgelegt:
 2. AUI und ABI sind zwei verschiedene Felder, die aneinander angrenzen. Ein
    Teil dessen, was das AUI erzeugt, taucht im Feld der ABI auf und wird von ihr
    wahrgenommen. Es wird dabei nicht selbst zur ABI.
-3. Die MBI bewegt sich immer in einem bestimmten Gebiet. Es gibt vier Arten
+3. Die MBI bewegt sich immer in einem bestimmten Gebiet. Es gibt fünf Arten
    von Gebieten:
    - ein Themengebiet (davon gibt es unendlich viele, etwa Familie oder Arbeit),
    - die jetzige Erfahrung: alles, was im Feld der ABI auftaucht,
    - die sensorischen Eindrücke,
-   - die Erinnerung.
+   - die Erinnerung,
+   - die Haltung.
 4. An dem Gebiet, in dem sich die MBI bewegt, orientieren sich ABI und AUI.
 5. Das AUI führt vergangene Themen und Erfahrungen mit sich in neue Gebiete,
    auf die sich die MBI richtet.
@@ -69,7 +70,8 @@ Festgelegt:
    indirekt. Zu etwas, das nur im AUI liegt und nicht in der ABI auftaucht,
    kann sie keine Haltung einnehmen.
 10. Die MBI kann Erinnerungen aktivieren. Die Erinnerung ist dabei nur ein
-    anderes Themengebiet.
+    anderes Themengebiet, genauso wie die Haltung: Auch sie ist selbst ein
+    Gebiet.
 
 Bewusst zurückgestellt: Grenzen der MBI (Aufmerksamkeit, Energie),
 Gewohnheitsbildung, weitere Bausteine wie Emotion oder Körper.
@@ -107,6 +109,15 @@ Zu den Erinnerungen:
   Was gerade erst erlebt wird, ist noch keine Erinnerung.
 - **Die Erinnerung verstärkt nichts:** Verlässt die MBI sie wieder, ist alles
   so verblasst wie zuvor. Festhalten kann sie etwas nur durch engage.
+
+Zur Haltung als Gebiet:
+
+- **Was zur Haltung gehört:** alles, wozu die MBI engaged oder disengaged hat.
+  Diese Erfahrungen gehören zugleich zu dem Gebiet, in dem die MBI dabei
+  agiert hat. In der Haltung zählen sie voll, alles andere wird mit halber
+  Stärke mitgeführt.
+- **Wie die MBI dorthin kommt:** durch einen Themenwechsel, wie in die Sinne
+  oder die Erinnerung.
 
 Zu den Themengebieten ohne MBI:
 
