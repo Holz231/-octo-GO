@@ -433,3 +433,66 @@ def test_was_aus_dem_abi_feld_verschwindet_zaehlt_nicht_mehr_voll():
     verlauf = [staerke(geist.schritt(), "Thema") for _ in range(4)]
     # 0.125 liegt unter der Schwelle: Ab da wird das Thema nur noch mitgeführt.
     assert verlauf == [0.5, 0.25, 0.125, 0.03125]
+
+
+# --- Erinnerungen: was nur im AUI liegt, erreicht die MBI nicht per Haltung ---
+
+VERBLASSTER_STREIT = (erfahrung("Streit", 0.9, "Familie", zeit=-10),)
+
+
+def erinnere(thema):
+    return Entscheidung(erinnerungen=(thema,))
+
+
+def test_zu_dem_was_nur_im_aui_liegt_gibt_es_keine_haltung():
+    geist = geist_mit(immer(Haltung.ENGAGE, "Streit"), "Familie", VERBLASSTER_STREIT)
+    moment = geist.schritt()
+
+    assert [i.thema for i in moment.aui_feld] == ["Streit"]
+    assert moment.abi_feld == ()
+    assert moment.haltungen == {}
+
+
+def test_aktivierte_erinnerung_taucht_einen_moment_spaeter_in_der_abi_auf():
+    geist = geist_mit(nach_plan({0: erinnere("Streit")}), "Familie", VERBLASSTER_STREIT)
+    erster, zweiter = geist.schritt(), geist.schritt()
+
+    assert im_feld(erster) == []
+    assert [(e.thema, e.staerke, e.gebiete) for e in erster.erinnert] == [
+        ("Streit", 0.9, ("Familie",))
+    ]
+    assert im_feld(zweiter) == ["Streit"]
+
+
+def test_erinnerung_aktivieren_ist_kein_engage_und_kein_themenwechsel():
+    geist = geist_mit(nach_plan({0: erinnere("Streit")}), "Arbeit", VERBLASSTER_STREIT)
+    moment = geist.schritt()
+
+    assert moment.haltungen == {}
+    assert moment.gebiete_danach == ("Arbeit",)
+
+
+def test_erinnerung_gehoert_zu_ihrem_urspruenglichen_gebiet():
+    geist = geist_mit(
+        nach_plan({0: erinnere("Streit")}), "Arbeit", VERBLASSTER_STREIT, nachklang=1.0
+    )
+    geist.schritt()
+    (streit,) = geist.schritt().aui_feld
+
+    assert (streit.staerke, streit.mitgebracht_aus) == (0.9, ("Familie",))
+
+
+def test_ohne_fruehere_erfahrung_gibt_es_keine_erinnerung():
+    geist = geist_mit(nach_plan({0: erinnere("Nie erlebt")}))
+    assert geist.schritt().erinnert == ()
+    assert geist.unterbewusstsein.erfahrungen == []
+
+
+def test_nach_der_erinnerung_ist_engage_moeglich():
+    plan = {0: erinnere("Streit"), 1: Entscheidung({"Streit": Haltung.ENGAGE})}
+    geist = geist_mit(nach_plan(plan), "Arbeit", VERBLASSTER_STREIT)
+    geist.schritt()
+    moment = geist.schritt()
+
+    assert moment.haltungen == {"Streit": Haltung.ENGAGE}
+    assert moment.gebiete_danach == ("Streit",)

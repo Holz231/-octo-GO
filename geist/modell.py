@@ -32,6 +32,9 @@ Die MBI kann sich auch autonom ausrichten, auch auf Themengebiete, die vorher
 nicht im Bewusstsein waren. Das ist kein engage, sondern lediglich ein
 Themenwechsel oder ein Themenerhalt: Im AUI wird dabei nichts verstärkt.
 
+Zu etwas, das nur im AUI liegt, kann die MBI keine Haltung einnehmen. Sie kann
+aber Erinnerungen aktivieren.
+
 Ablauf eines Moments:
 
 1. Das AUI erzeugt Impulse aus vorherigen und jetzigen Erfahrungen, orientiert
@@ -39,7 +42,8 @@ Ablauf eines Moments:
 2. Ein Teil davon taucht im angrenzenden Feld der ABI auf: Das ist die
    wahrgenommene Realität. Die Impulse werden dabei nicht zur ABI, sie werden
    von ihr nur wahrgenommen.
-3. Die MBI nimmt Haltungen ein und wechselt oder erhält ihr Thema.
+3. Die MBI nimmt Haltungen ein, wechselt oder erhält ihr Thema und kann
+   Erinnerungen aktivieren.
 4. Engage und disengage werden selbst zur Erfahrung. Nur so, also indirekt,
    erreicht die MBI das AUI.
 5. In der ABI können Themengebiete ohne die MBI entstehen oder sich auflösen.
@@ -115,6 +119,8 @@ class Entscheidung:
     haltungen: Mapping[str, Haltung] = field(default_factory=dict)
     # Das Gebiet, auf das sie sich autonom richtet. None = Themenerhalt.
     themenwechsel: str | None = None
+    # Themen, deren Erinnerung sie aktiviert.
+    erinnerungen: tuple[str, ...] = ()
 
 
 # ANNAHME (noch nicht vom Modell vorgegeben): wie stark engage und disengage als
@@ -156,6 +162,23 @@ class Unterbewusstsein:
 
     def erlebe(self, erfahrung: Erfahrung) -> None:
         self.erfahrungen.append(erfahrung)
+
+    def aktiviere_erinnerung(self, thema: str, zeit: int) -> Erfahrung | None:
+        """Lässt die stärkste frühere Erfahrung zu einem Thema noch einmal erleben.
+
+        Gibt die neue Erfahrung zurück, oder None, wenn es zu dem Thema keine
+        Erinnerung gibt.
+        """
+        # ANNAHME: Erinnerungen sind die früheren Erfahrungen im AUI. Eine zu
+        # aktivieren heißt, sie in ihrer ursprünglichen Stärke und in ihren
+        # ursprünglichen Gebieten noch einmal zu erleben.
+        fruehere = [e for e in self.erfahrungen if e.thema == thema and e.staerke > 0]
+        if not fruehere:
+            return None
+        staerkste = max(fruehere, key=lambda e: e.staerke)
+        erinnerung = Erfahrung(thema, staerkste.staerke, zeit, staerkste.gebiete)
+        self.erlebe(erinnerung)
+        return erinnerung
 
     def erzeuge_impulse(
         self, zeit: int, gebiete: Collection[str], im_abi_feld: Collection[str] = ()
@@ -268,8 +291,8 @@ class ManuelleBewussteIntention:
         # eine Eigenschaft der MBI, die von außen eingestellt wird.
         self.mehrere = mehrere
 
-    def richte_aus(self, lage: Lage) -> Mapping[str, Haltung]:
-        """Fragt den Entscheider, ändert die Gebiete und gibt die Haltungen zurück."""
+    def richte_aus(self, lage: Lage) -> Entscheidung:
+        """Fragt den Entscheider, ändert die Gebiete und gibt zurück, was davon gilt."""
         entscheidung = self.entscheider(lage)
         if entscheidung.themenwechsel:
             # ANNAHME: Ein Themenwechsel ersetzt alle bisherigen Gebiete, auch
@@ -290,7 +313,7 @@ class ManuelleBewussteIntention:
         if not self.gebiete:
             # ANNAHME: Ohne ein eigenes Gebiet bleibt der MBI die jetzige Erfahrung.
             self.gebiete = [JETZIGE_ERFAHRUNG]
-        return haltungen
+        return Entscheidung(haltungen, entscheidung.themenwechsel, entscheidung.erinnerungen)
 
 
 @dataclass(frozen=True)
@@ -304,6 +327,7 @@ class Moment:
     aui_feld: tuple[Impuls, ...]  # alles, was im Feld des AUI liegt
     abi_feld: tuple[Impuls, ...]  # der Teil, der auch im Feld der ABI auftaucht
     haltungen: Mapping[str, Haltung]  # Thema -> Haltung der MBI
+    erinnert: tuple[Erfahrung, ...]  # Erinnerungen, die die MBI aktiviert hat
     # Die Gebiete, wie sie ab dem nächsten Moment gelten.
     gebiete_danach: tuple[str, ...]
     gebiete_ohne_mbi_danach: tuple[str, ...]
@@ -352,7 +376,8 @@ class Geist:
         abi_feld = self.automatisch.nimm_wahr(aui_feld)
         lage = Lage(gebiete, gebiete_ohne_mbi, tuple(abi_feld), sinne)
         # ANNAHME: Ein Wechsel der Gebiete gilt ab dem nächsten Moment.
-        haltungen = self.manuell.richte_aus(lage)
+        entscheidung = self.manuell.richte_aus(lage)
+        haltungen = entscheidung.haltungen
 
         for thema, haltung in haltungen.items():
             wirkung = self.wirkung[haltung]
@@ -364,6 +389,13 @@ class Geist:
                 # agiert hat, als sie die Haltung einnahm.
                 self.unterbewusstsein.erlebe(Erfahrung(thema, wirkung, self.zeit, gebiete))
 
+        # ANNAHME: Eine aktivierte Erinnerung wirkt wie jede Erfahrung über das
+        # AUI und kann deshalb erst im nächsten Moment in der ABI auftauchen.
+        erinnert = [
+            self.unterbewusstsein.aktiviere_erinnerung(thema, self.zeit)
+            for thema in entscheidung.erinnerungen
+        ]
+
         self.automatisch.lasse_gebiete_entstehen(haltungen, self.manuell.gebiete)
 
         moment = Moment(
@@ -374,6 +406,7 @@ class Geist:
             tuple(aui_feld),
             lage.abi_feld,
             haltungen,
+            tuple(e for e in erinnert if e),
             tuple(self.manuell.gebiete),
             tuple(self.automatisch.gebiete_ohne_mbi),
         )

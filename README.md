@@ -10,6 +10,7 @@ welche Lücken das Programm vorläufig mit eigenen Annahmen füllt.
 
     python -m geist --demo             # die drei Haltungen im Vergleich
     python -m geist --demo gebiete     # wie das AUI Themen in neue Gebiete mitführt
+    python -m geist --demo erinnerung  # wie die MBI eine Erinnerung aktiviert
     python -m geist                    # interaktiv: du bist die MBI
     python -m pytest                   # Tests
 
@@ -64,10 +65,12 @@ Festgelegt:
    die ABI gestiegen ist. Das ist kein engage, sondern lediglich ein
    Themenwechsel oder ein Themenerhalt.
 9. Die MBI hat keinen direkten Zugriff auf das AUI. Sie erreicht es nur
-   indirekt.
+   indirekt. Zu etwas, das nur im AUI liegt und nicht in der ABI auftaucht,
+   kann sie keine Haltung einnehmen.
+10. Die MBI kann Erinnerungen aktivieren.
 
 Bewusst zurückgestellt: Grenzen der MBI (Aufmerksamkeit, Energie),
-Gewohnheitsbildung, weitere Bausteine wie Emotion, Erinnerung oder Körper.
+Gewohnheitsbildung, weitere Bausteine wie Emotion oder Körper.
 
 ## 3. Vorläufige Annahmen im Programm
 
@@ -91,6 +94,17 @@ Zu den Haltungen:
 - **Themenwechsel in die Sinne oder die jetzige Erfahrung:** Auch dorthin
   kommt die MBI durch einen Themenwechsel.
 - **Themenerhalt:** Tut die MBI nichts, bleibt sie in ihren Gebieten.
+
+Zu den Erinnerungen:
+
+- **Was eine Erinnerung ist:** eine frühere Erfahrung im AUI. Erinnern kann
+  sich die MBI nur an Themen, zu denen es dort eine gibt.
+- **Was aktivieren bewirkt:** Die stärkste frühere Erfahrung zu dem Thema wird
+  noch einmal erlebt, in ihrer ursprünglichen Stärke und in ihren
+  ursprünglichen Gebieten. Das ist weder engage noch Themenwechsel.
+- **Wann sie in der ABI auftaucht:** frühestens im nächsten Moment, weil sie
+  wie jede Erfahrung über das AUI wirkt. Gehört sie zu einem anderen Gebiet als
+  dem der MBI, kommt sie nur mit halber Stärke mit.
 
 Zu den Themengebieten ohne MBI:
 
