@@ -51,6 +51,10 @@ def im_feld(moment):
 
 STARK_UND_SCHWACH = (erfahrung("Stark", 0.9), erfahrung("Schwach", 0.1))
 SORGE_AUS_DER_FAMILIE = (erfahrung("Sorge", 0.8, "Familie"),)
+ERST_ENGAGE_DANN_DISENGAGE = {
+    0: Entscheidung({"Sorge": Haltung.ENGAGE}),
+    1: Entscheidung({"Sorge": Haltung.DISENGAGE}),
+}
 
 
 # --- AUI: Impulse aus Erfahrungen ---
@@ -123,7 +127,11 @@ def test_engage_verstaerkt_das_thema_im_aui():
 
 
 def test_engage_macht_das_thema_zum_alleinigen_gebiet_wenn_die_mbi_nur_eines_haelt():
-    geist = geist_mit(nach_plan({0: Entscheidung({"Sorge": Haltung.ENGAGE})}), "Arbeit")
+    geist = geist_mit(
+        nach_plan({0: Entscheidung({"Sorge": Haltung.ENGAGE})}),
+        "Arbeit",
+        SORGE_AUS_DER_FAMILIE,
+    )
     erster, zweiter = geist.schritt(), geist.schritt()
 
     assert (erster.gebiete, erster.gebiete_danach) == (("Arbeit",), ("Sorge",))
@@ -131,7 +139,9 @@ def test_engage_macht_das_thema_zum_alleinigen_gebiet_wenn_die_mbi_nur_eines_hae
 
 
 def test_engage_stellt_das_thema_parallel_wenn_die_mbi_mehrere_haelt():
-    geist = geist_mit(immer(Haltung.ENGAGE, "Sorge"), "Arbeit", mehrere=True)
+    geist = geist_mit(
+        immer(Haltung.ENGAGE, "Sorge"), "Arbeit", SORGE_AUS_DER_FAMILIE, mehrere=True
+    )
     geist.schritt()
     assert geist.schritt().gebiete == ("Arbeit", "Sorge")
 
@@ -149,18 +159,23 @@ def test_im_eigenen_themengebiet_zaehlt_das_thema_voll():
     assert (eigenes_gebiet.staerke, eigenes_gebiet.mitgebracht_aus) == (1.0, ())
 
 
-def test_frei_gewaehltes_thema_taucht_nach_engage_im_feld_auf():
-    geist = geist_mit(immer(Haltung.ENGAGE, "Urlaub"))
-    assert im_feld(geist.schritt()) == []
-    assert im_feld(geist.schritt()) == ["Urlaub"]
+def test_engage_gibt_es_nur_zu_dem_was_im_abi_feld_auftaucht():
+    geist = geist_mit(
+        immer(Haltung.ENGAGE, "Leise"), "Arbeit", [erfahrung("Leise", 0.2, "Arbeit")]
+    )
+    moment = geist.schritt()
+
+    assert im_feld(moment) == []
+    assert moment.haltungen == {}
+    assert moment.gebiete_danach == ("Arbeit",)
+    assert len(geist.unterbewusstsein.erfahrungen) == 1
 
 
 def test_engage_gehoert_zu_den_gebieten_in_denen_die_mbi_agiert_hat():
-    geist = geist_mit(immer(Haltung.ENGAGE, "Mail"), "Arbeit")
+    geist = geist_mit(immer(Haltung.ENGAGE, "Mail"), "Arbeit", [erfahrung("Mail", 0.5, "Arbeit")])
     geist.schritt()
-    assert [(e.thema, e.gebiete) for e in geist.unterbewusstsein.erfahrungen] == [
-        ("Mail", ("Arbeit",))
-    ]
+    neu = geist.unterbewusstsein.erfahrungen[-1]
+    assert (neu.thema, neu.staerke, neu.gebiete) == ("Mail", 0.4, ("Arbeit",))
 
 
 # --- Disengage: schwächt im AUI und verhindert das Themengebiet ---
@@ -180,20 +195,20 @@ def test_disengage_macht_das_thema_nicht_zum_gebiet():
 
 
 def test_disengage_beendet_ein_themengebiet_der_mbi():
-    plan = {0: Entscheidung({"Sorge": Haltung.ENGAGE}), 1: Entscheidung({"Sorge": Haltung.DISENGAGE})}
-    geist = geist_mit(nach_plan(plan), "Arbeit", mehrere=True)
+    geist = geist_mit(nach_plan(ERST_ENGAGE_DANN_DISENGAGE), "Arbeit", SORGE_AUS_DER_FAMILIE, mehrere=True)
     verlauf = [geist.schritt().gebiete_danach for _ in range(2)]
     assert verlauf == [("Arbeit", "Sorge"), ("Arbeit",)]
 
 
 def test_ohne_eigenes_gebiet_bleibt_der_mbi_die_jetzige_erfahrung():
-    geist = geist_mit(immer(Haltung.DISENGAGE, "Arbeit"), "Arbeit")
-    assert geist.schritt().gebiete_danach == (JETZIGE_ERFAHRUNG,)
+    geist = geist_mit(nach_plan(ERST_ENGAGE_DANN_DISENGAGE), "Arbeit", SORGE_AUS_DER_FAMILIE)
+    verlauf = [geist.schritt().gebiete_danach for _ in range(2)]
+    assert verlauf == [("Sorge",), (JETZIGE_ERFAHRUNG,)]
 
 
-def test_disengage_von_nicht_wahrnehmbarem_hinterlaesst_keine_spur():
+def test_disengage_gibt_es_nur_zu_dem_was_im_abi_feld_auftaucht():
     geist = geist_mit(immer(Haltung.DISENGAGE, "Nirgends"))
-    geist.schritt()
+    assert geist.schritt().haltungen == {}
     assert geist.unterbewusstsein.erfahrungen == []
 
 
@@ -276,33 +291,36 @@ def test_disengage_beendet_ein_themengebiet_das_ohne_mbi_entstanden_ist():
     assert (moment.gebiete_danach, moment.gebiete_ohne_mbi_danach) == (("Arbeit",), ())
 
 
-# --- Gebiete: die MBI bewegt sich, AUI und ABI orientieren sich daran ---
+# --- Autonomes Ausrichten: Themenwechsel oder Themenerhalt, kein engage ---
 
 
-def test_mbi_richtet_sich_autonom_auf_ein_gebiet_das_nie_im_bewusstsein_war():
-    geist = geist_mit(nach_plan({0: Entscheidung(gebiet="Urlaub")}), "Familie")
+def test_themenwechsel_auf_ein_gebiet_das_nie_im_bewusstsein_war():
+    geist = geist_mit(nach_plan({0: Entscheidung(themenwechsel="Urlaub")}), "Familie")
     erster, zweiter = geist.schritt(), geist.schritt()
 
     # Nichts ist aus dem AUI in die ABI gestiegen, und trotzdem wechselt die MBI.
     assert erster.aui_feld == erster.abi_feld == ()
     assert (erster.gebiete, erster.gebiete_danach) == (("Familie",), ("Urlaub",))
     assert zweiter.gebiete == ("Urlaub",)
-    # Sich nur zu richten, verstärkt nichts im AUI.
+    # Ein Themenwechsel ist kein engage: Im AUI wird nichts verstärkt.
     assert geist.unterbewusstsein.erfahrungen == []
+    assert zweiter.aui_feld == ()
 
 
-def test_engage_macht_auch_ein_nie_bewusstes_thema_zum_gebiet_der_mbi():
-    geist = geist_mit(nach_plan({0: Entscheidung({"Urlaub": Haltung.ENGAGE})}), "Familie")
-    erster, zweiter = geist.schritt(), geist.schritt()
+def test_themenerhalt_laesst_die_gebiete_wie_sie_sind():
+    geist = geist_mit(gebiet="Arbeit", erfahrungen=SORGE_AUS_DER_FAMILIE)
+    moment = geist.schritt()
 
-    assert erster.aui_feld == ()
-    assert zweiter.gebiete == ("Urlaub",)
-    assert im_feld(zweiter) == ["Urlaub"]
+    assert moment.gebiete_danach == ("Arbeit",)
+    assert len(geist.unterbewusstsein.erfahrungen) == 1
 
 
-def test_richten_stellt_das_gebiet_parallel_wenn_die_mbi_mehrere_haelt():
-    geist = geist_mit(nach_plan({0: Entscheidung(gebiet=SINNE)}), "Arbeit", mehrere=True)
-    assert geist.schritt().gebiete_danach == ("Arbeit", SINNE)
+def test_themenwechsel_ersetzt_die_gebiete_auch_wenn_die_mbi_mehrere_haelt():
+    geist = geist_mit(nach_plan({0: Entscheidung(themenwechsel=SINNE)}), "Arbeit", mehrere=True)
+    assert geist.schritt().gebiete_danach == (SINNE,)
+
+
+# --- Gebiete: AUI und ABI orientieren sich daran ---
 
 
 def test_aui_orientiert_sich_am_gebiet_der_mbi():
@@ -320,7 +338,7 @@ def test_aui_orientiert_sich_am_gebiet_der_mbi():
 
 def test_aui_fuehrt_vergangene_themen_mit_in_neue_gebiete():
     geist = geist_mit(
-        nach_plan({0: Entscheidung(gebiet="Arbeit")}),
+        nach_plan({0: Entscheidung(themenwechsel="Arbeit")}),
         "Familie",
         [erfahrung("Sorge", 1.0, gebiet="Familie")],
     )
@@ -333,7 +351,7 @@ def test_aui_fuehrt_vergangene_themen_mit_in_neue_gebiete():
 
 
 def test_zurueck_im_alten_gebiet_zaehlt_das_thema_wieder_voll():
-    plan = {0: Entscheidung(gebiet="Arbeit"), 1: Entscheidung(gebiet="Familie")}
+    plan = {0: Entscheidung(themenwechsel="Arbeit"), 1: Entscheidung(themenwechsel="Familie")}
     geist = geist_mit(nach_plan(plan), "Familie", SORGE_AUS_DER_FAMILIE, nachklang=1.0)
     verlauf = [staerke(geist.schritt(), "Sorge") for _ in range(3)]
     assert verlauf == [0.8, 0.4, 0.8]
@@ -382,7 +400,7 @@ def test_themen_kommen_abgeschwaecht_mit_in_die_sinne():
 
 
 def test_was_im_abi_feld_auftaucht_zaehlt_in_der_jetzigen_erfahrung_voll():
-    plan = {0: Entscheidung(gebiet="Arbeit"), 1: Entscheidung(gebiet=JETZIGE_ERFAHRUNG)}
+    plan = {0: Entscheidung(themenwechsel="Arbeit"), 1: Entscheidung(themenwechsel=JETZIGE_ERFAHRUNG)}
     geist = geist_mit(nach_plan(plan), "Familie", SORGE_AUS_DER_FAMILIE, nachklang=1.0)
     daheim, in_der_arbeit, jetzt = (geist.schritt().aui_feld[0] for _ in range(3))
 
@@ -407,7 +425,7 @@ def test_was_nicht_im_abi_feld_auftaucht_wird_nur_mitgefuehrt():
 
 def test_was_aus_dem_abi_feld_verschwindet_zaehlt_nicht_mehr_voll():
     geist = geist_mit(
-        nach_plan({0: Entscheidung(gebiet=JETZIGE_ERFAHRUNG)}),
+        nach_plan({0: Entscheidung(themenwechsel=JETZIGE_ERFAHRUNG)}),
         erfahrungen=[erfahrung("Thema", 0.5)],
         nachklang=0.5,
         schwelle=0.2,

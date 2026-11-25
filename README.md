@@ -47,7 +47,9 @@ Festgelegt:
    auf die sich die MBI richtet.
 6. Wie die MBI und das AUI gerade sind, formt gleichzeitig die wahrgenommene
    Realität der ABI.
-7. Die MBI nimmt zu einem Thema eine von drei Haltungen ein:
+7. Die MBI nimmt zu einem Thema eine von drei Haltungen ein. Haltungen gibt
+   es nur bei AUI und ABI, also zu dem, was aus dem AUI im Feld der ABI
+   auftaucht:
    - **engage** verstärkt das Thema im AUI. Zugleich macht die MBI es zu einem
      neuen Themengebiet, in dem sie agiert: parallel zum bisherigen oder
      allein, je nachdem, ob die MBI mehrere Themen zugleich hat oder nur eines.
@@ -59,7 +61,8 @@ Festgelegt:
      Themengebiet wird. Oder eben nicht, dann verblasst es wieder.
 8. Die MBI kann sich auch autonom auf neue Themengebiete richten, auch wenn
    sie vorher nicht im Bewusstsein waren, also ohne dass etwas aus dem AUI in
-   die ABI gestiegen ist.
+   die ABI gestiegen ist. Das ist kein engage, sondern lediglich ein
+   Themenwechsel oder ein Themenerhalt.
 9. Die MBI hat keinen direkten Zugriff auf das AUI. Sie erreicht es nur
    indirekt.
 
@@ -74,18 +77,20 @@ zu laufen. Sie stehen in `geist/modell.py` und sind dort mit `ANNAHME` markiert.
 Zu den Haltungen:
 
 - **Wie stark engage und disengage wirken:** um einen festen Betrag (0,4), als
-  neue Erfahrung im AUI. Lösen kann man sich nur von etwas, das gerade
-  wahrnehmbar ist.
+  neue Erfahrung im AUI. Disengage schwächt höchstens so weit, wie das Thema
+  gerade auftaucht.
 - **Mehrere oder eines:** Ob die MBI mehrere Gebiete zugleich hält, ist eine
   Einstellung von außen (`--mehrere`), keine Entscheidung im einzelnen Moment.
 - **Disengage beendet ein Gebiet:** Ist das Thema schon ein Themengebiet der
   MBI, hört es durch disengage auf, eines zu sein.
 - **Ohne eigenes Gebiet:** Gibt die MBI ihr letztes Gebiet auf, bleibt ihr die
   jetzige Erfahrung.
-- **Zwei Wege, sich autonom zu richten:** Die MBI kann zu einem frei gewählten
-  Thema engagen, dann wird es zugleich im AUI verstärkt. Oder sie richtet sich
-  nur auf ein Gebiet, ohne etwas zu verstärken. Auf dem zweiten Weg kommt sie
-  auch in die Sinne oder in die jetzige Erfahrung.
+- **Themenwechsel ersetzt:** Wechselt die MBI autonom das Thema, gibt sie alle
+  bisherigen Gebiete auf, auch wenn sie mehrere zugleich hält. Parallel kommt
+  ein Gebiet nur durch engage dazu.
+- **Themenwechsel in die Sinne oder die jetzige Erfahrung:** Auch dorthin
+  kommt die MBI durch einen Themenwechsel.
+- **Themenerhalt:** Tut die MBI nichts, bleibt sie in ihren Gebieten.
 
 Zu den Themengebieten ohne MBI:
 

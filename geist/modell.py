@@ -16,7 +16,8 @@ und ABI. Das AUI führt aber vergangene Themen und Erfahrungen mit in jedes neue
 Gebiet. Wie die MBI und das AUI gerade sind, formt gleichzeitig die
 wahrgenommene Realität der ABI.
 
-Die drei Haltungen der MBI zu einem Thema:
+Haltungen gibt es nur zu dem, was aus dem AUI im Feld der ABI auftaucht. Die
+drei Haltungen der MBI zu einem solchen Thema:
 
 - engage verstärkt das Thema im AUI. Zugleich macht die MBI es zu einem neuen
   Themengebiet, in dem sie agiert: parallel zu den bisherigen, wenn sie mehrere
@@ -27,6 +28,10 @@ Die drei Haltungen der MBI zu einem Thema:
   das Thema ohne die MBI aus dem AUI in die ABI geht und dort von selbst zu
   einem Themengebiet wird. Oder es verblasst wieder.
 
+Die MBI kann sich auch autonom ausrichten, auch auf Themengebiete, die vorher
+nicht im Bewusstsein waren. Das ist kein engage, sondern lediglich ein
+Themenwechsel oder ein Themenerhalt: Im AUI wird dabei nichts verstärkt.
+
 Ablauf eines Moments:
 
 1. Das AUI erzeugt Impulse aus vorherigen und jetzigen Erfahrungen, orientiert
@@ -34,7 +39,7 @@ Ablauf eines Moments:
 2. Ein Teil davon taucht im angrenzenden Feld der ABI auf: Das ist die
    wahrgenommene Realität. Die Impulse werden dabei nicht zur ABI, sie werden
    von ihr nur wahrgenommen.
-3. Die MBI nimmt Haltungen ein und kann sich auf ein neues Gebiet richten.
+3. Die MBI nimmt Haltungen ein und wechselt oder erhält ihr Thema.
 4. Engage und disengage werden selbst zur Erfahrung. Nur so, also indirekt,
    erreicht die MBI das AUI.
 5. In der ABI können Themengebiete ohne die MBI entstehen oder sich auflösen.
@@ -94,21 +99,22 @@ class Lage:
     sinne: Mapping[str, float]  # sensorische Eindrücke: Thema -> Stärke
 
     def staerke(self, thema: str) -> float:
-        """Wie stark ein Thema gerade wahrnehmbar ist (0 = gar nicht)."""
+        """Wie stark ein Thema im Feld der ABI auftaucht (0 = gar nicht)."""
         for impuls in self.abi_feld:
             if impuls.thema == thema:
                 return impuls.staerke
-        return self.sinne.get(thema, 0.0)
+        return 0.0
 
 
 @dataclass(frozen=True)
 class Entscheidung:
     """Was die MBI in einem Moment willentlich tut."""
 
-    # Thema -> Haltung. Alles, was nicht genannt wird, bleibt bei "weder noch".
+    # Thema -> Haltung, nur zu Themen im Feld der ABI. Alles, was dort nicht
+    # genannt wird, bleibt bei "weder noch".
     haltungen: Mapping[str, Haltung] = field(default_factory=dict)
-    # Ein Gebiet, auf das sie sich richtet, ohne ein Thema zu verstärken.
-    gebiet: str | None = None
+    # Das Gebiet, auf das sie sich autonom richtet. None = Themenerhalt.
+    themenwechsel: str | None = None
 
 
 # ANNAHME (noch nicht vom Modell vorgegeben): wie stark engage und disengage als
@@ -249,9 +255,10 @@ class ManuelleBewussteIntention:
     """MBI. Manuell und bewusst: was man willentlich lenkt.
 
     Sie agiert immer in mindestens einem Gebiet: in einem Themengebiet, in der
-    jetzigen Erfahrung oder in den Sinnen. Sie kann sich autonom auf neue
-    Themengebiete richten, auch auf solche, die vorher nicht im Bewusstsein
-    waren. Das Feld des AUI bekommt sie nie zu sehen.
+    jetzigen Erfahrung oder in den Sinnen. Sie kann ihr Thema autonom wechseln,
+    auch zu einem Themengebiet, das vorher nicht im Bewusstsein war. Engage und
+    disengage gibt es dagegen nur zu dem, was im Feld der ABI auftaucht. Das
+    Feld des AUI bekommt sie nie zu sehen.
     """
 
     def __init__(self, entscheider: Entscheider, gebiet: str, mehrere: bool = False):
@@ -262,25 +269,28 @@ class ManuelleBewussteIntention:
         self.mehrere = mehrere
 
     def richte_aus(self, lage: Lage) -> Mapping[str, Haltung]:
-        """Fragt den Entscheider, wechselt die Gebiete und gibt die Haltungen zurück."""
+        """Fragt den Entscheider, ändert die Gebiete und gibt die Haltungen zurück."""
         entscheidung = self.entscheider(lage)
-        if entscheidung.gebiet:
-            self._betritt(entscheidung.gebiet)
-        for thema, haltung in entscheidung.haltungen.items():
+        if entscheidung.themenwechsel:
+            # ANNAHME: Ein Themenwechsel ersetzt alle bisherigen Gebiete, auch
+            # wenn die MBI mehrere zugleich hält.
+            self.gebiete = [entscheidung.themenwechsel]
+
+        # Haltungen gibt es nur zu dem, was im Feld der ABI auftaucht.
+        im_feld = {impuls.thema for impuls in lage.abi_feld}
+        haltungen = {t: h for t, h in entscheidung.haltungen.items() if t in im_feld}
+        for thema, haltung in haltungen.items():
             if haltung is Haltung.ENGAGE:
-                self._betritt(thema)
+                if not self.mehrere:
+                    self.gebiete = [thema]
+                elif thema not in self.gebiete:
+                    self.gebiete.append(thema)
             elif haltung is Haltung.DISENGAGE and thema in self.gebiete:
                 self.gebiete.remove(thema)
         if not self.gebiete:
             # ANNAHME: Ohne ein eigenes Gebiet bleibt der MBI die jetzige Erfahrung.
             self.gebiete = [JETZIGE_ERFAHRUNG]
-        return dict(entscheidung.haltungen)
-
-    def _betritt(self, gebiet: str) -> None:
-        if not self.mehrere:
-            self.gebiete = [gebiet]
-        elif gebiet not in self.gebiete:
-            self.gebiete.append(gebiet)
+        return haltungen
 
 
 @dataclass(frozen=True)
@@ -347,7 +357,7 @@ class Geist:
         for thema, haltung in haltungen.items():
             wirkung = self.wirkung[haltung]
             if wirkung < 0:
-                # Lösen kann man sich nur so weit, wie etwas wahrnehmbar ist.
+                # Schwächen lässt sich etwas nur so weit, wie es auftaucht.
                 wirkung = max(wirkung, -lage.staerke(thema))
             if wirkung:
                 # ANNAHME: Die Erfahrung gehört zu den Gebieten, in denen die MBI

@@ -46,8 +46,7 @@ def zeige(moment: Moment, schwelle: float) -> None:
     print(kopf)
 
     impulse = {i.thema: i for i in moment.aui_feld}
-    # Auch Themen zeigen, zu denen die MBI eine Haltung hat, ohne dass ein Impuls da ist.
-    themen = list(impulse) + [t for t in moment.haltungen if t not in impulse]
+    themen = list(impulse)
     if themen:
         breite = max(len("Thema"), *(len(t) for t in themen))
         # Die beiden Felder grenzen aneinander: Der Balken reicht über die Grenze,
@@ -131,9 +130,9 @@ def demo_gebiete(mehrere: bool) -> None:
     wird. Themengebiete ohne die MBI sind hier abgeschaltet.
     """
     ablauf = {
-        0: Entscheidung(gebiet=SINNE),
-        1: Entscheidung(gebiet=JETZIGE_ERFAHRUNG),
-        3: Entscheidung(gebiet="Familie"),
+        0: Entscheidung(themenwechsel=SINNE),
+        1: Entscheidung(themenwechsel=JETZIGE_ERFAHRUNG),
+        3: Entscheidung(themenwechsel="Familie"),
     }
     geist = Geist(
         lambda lage: ablauf.get(geist.zeit, Entscheidung()),
@@ -155,7 +154,7 @@ def lies_gebiet(text: str) -> str:
 
 
 def lies_entscheidung(text: str) -> Entscheidung:
-    """'e Sorge, d Musik, g sinne' -> Haltungen zu Sorge und Musik, richten auf die Sinne"""
+    """'e Sorge, d Musik, g sinne' -> Haltungen zu Sorge und Musik, Wechsel in die Sinne"""
     haltungen: dict[str, Haltung] = {}
     gebiet = None
     for teil in text.split(","):
@@ -168,7 +167,7 @@ def lies_entscheidung(text: str) -> Entscheidung:
         if taste == "g":
             gebiet = lies_gebiet(name)
         else:
-            haltungen[lies_gebiet(name)] = TASTEN[taste]
+            haltungen[name] = TASTEN[taste]
     return Entscheidung(haltungen, gebiet)
 
 
@@ -180,12 +179,19 @@ def frage_entscheidung(lage: Lage) -> Entscheidung:
         print(f"  Ohne dich:     {benenne(lage.gebiete_ohne_mbi)}")
     print(f"  ABI-Feld:      {feld or '-'}")
     print(f"  Sinne:         {sinne or '-'}")
+    im_feld = {impuls.thema for impuls in lage.abi_feld}
     while True:
         antwort = input("  Was tust du? ")
         try:
-            return lies_entscheidung(antwort)
+            entscheidung = lies_entscheidung(antwort)
         except ValueError as fehler:
             print(f"  Nicht verstanden: '{fehler}'. Beispiel: e Sorge, d Musik, g sinne")
+            continue
+        fremd = [thema for thema in entscheidung.haltungen if thema not in im_feld]
+        if not fremd:
+            return entscheidung
+        print(f"  Nicht im ABI-Feld: {', '.join(fremd)}. Engage und disengage gibt es")
+        print("  nur zu dem, was dort auftaucht. Für einen Themenwechsel: g Gebiet")
 
 
 def lies_sinne(text: str) -> dict[str, float]:
@@ -211,9 +217,11 @@ def interaktiv(mehrere: bool) -> None:
     print("2. Was du tust, mehrere mit Komma:")
     print("   'e Thema'  engage: verstärkt das Thema und macht es zu deinem Themengebiet.")
     print("   'd Thema'  disengage: schwächt das Thema, es ist kein Gebiet von dir mehr.")
-    print("   'g Gebiet' richtet dich auf ein Gebiet, ohne etwas zu verstärken:")
-    print("              ein Themengebiet, 'sinne' oder 'jetzt' (die jetzige Erfahrung).")
-    print("   Leer = weder noch: Dann kann ein Thema von selbst zum Themengebiet werden.")
+    print("              Beides geht nur zu Themen, die im ABI-Feld auftauchen.")
+    print("   'g Gebiet' Themenwechsel, ohne etwas zu verstärken: in ein beliebiges")
+    print("              Themengebiet, 'sinne' oder 'jetzt' (die jetzige Erfahrung).")
+    print("   Leer = Themenerhalt und weder noch: Dann kann ein Thema im ABI-Feld")
+    print("   von selbst zum Themengebiet werden.")
     try:
         gebiet = ""
         while not gebiet:
