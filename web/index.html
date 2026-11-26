@@ -2,8 +2,9 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
 <style>
-  /* Aufbau: links das, was gerade da ist und was man tut; rechts Haltung und Verlauf.
-     Das Feld des AUI liegt im Schatten, das der ABI im Licht, mit der Grenze dazwischen. */
+  /* Aufbau: oben die Uhr, darunter die Haltung, dann links die beiden Felder und was man
+     tut, rechts der Verlauf. Das Feld des AUI liegt im Schatten, das der ABI im Licht,
+     mit der Grenze dazwischen. Die Zeit läuft von selbst. */
   :root {
     --grund: #eef1f6;
     --flaeche: #ffffff;
@@ -64,6 +65,8 @@
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
+  /* Der Streifen über der mitlaufenden Uhr, damit dort nichts durchscheint. */
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--grund); }
   h1, h2 { font-family: var(--titel); text-wrap: balance; margin: 0; }
   h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; }
   h2 { font-size: 1.05rem; font-weight: 500; }
@@ -73,7 +76,6 @@
 
   .seite { max-width: 68rem; margin: 0 auto; display: grid; gap: 1.25rem; }
   .kopf { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1rem; }
-  .kopf .moment { color: var(--leise); font-variant-numeric: tabular-nums; }
   .kopf .beispiel { color: var(--leise); font-size: 0.85rem; margin-left: auto; }
   .spalten { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); }
   @media (min-width: 60rem) { .spalten { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); align-items: start; } }
@@ -84,6 +86,15 @@
   .hinweis { color: var(--leise); font-size: 0.85rem; }
   .etikett { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--leise); }
 
+  /* Die Uhr: bleibt beim Blättern oben stehen */
+  .uhr { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--grund); padding-block: 0.6rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; border-bottom: 1px solid var(--linie); }
+  .uhr .stand { font-family: var(--titel); font-weight: 500; font-variant-numeric: tabular-nums; min-width: 8.5rem; }
+  .uhr .stand small { display: block; font-family: var(--schrift); font-size: 0.78rem; color: var(--leise); }
+  .uhr.steht .stand small { color: var(--unheilsam); }
+  .uhr label { display: flex; align-items: center; gap: 0.4rem; }
+  .uhr .tasten { color: var(--leise); font-size: 0.8rem; margin-left: auto; }
+  kbd { font: inherit; font-size: 0.78rem; border: 1px solid var(--linie); border-bottom-width: 2px; border-radius: 4px; padding: 0 0.3rem; background: var(--flaeche); }
+
   /* Die beiden Felder */
   .felder ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; }
   .feldkopf, .impuls .zeile { display: grid; grid-template-columns: minmax(0, 1fr) 3.2rem; gap: 0.5rem; align-items: center; }
@@ -91,6 +102,7 @@
   .feldkopf .namen span:last-child { padding-left: 0.5rem; }
   .impuls { padding: 0.5rem 0; border-top: 1px solid var(--linie); display: grid; gap: 0.35rem; }
   .impuls .name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; font-weight: 600; }
+  .impuls .marken { display: contents; }
   .impuls:not(.im-abi) .name { color: var(--leise); font-weight: 500; }
   .marke { font-size: 0.75rem; font-weight: 500; color: var(--leise); border: 1px solid var(--linie); border-radius: 999px; padding: 0 0.5rem; white-space: nowrap; }
   .marke.heilsam { color: var(--heilsam); border-color: currentColor; }
@@ -125,19 +137,24 @@
   .messer.voll span { background: var(--unheilsam); }
 
   /* Eingaben */
-  .reihe { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+  .reihe { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end; }
   .reihe label { display: grid; gap: 0.15rem; min-width: 0; }
+  .reihe label.haken { display: flex; align-items: center; gap: 0.4rem; padding-bottom: 0.35rem; }
   input[type="text"], select { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 6px; padding: 0.35rem 0.5rem; max-width: 100%; }
   input[type="range"] { accent-color: var(--akzent); width: 8rem; max-width: 100%; }
+  input[type="checkbox"] { accent-color: var(--akzent); }
   .knopf { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 6px; padding: 0.35rem 0.8rem; cursor: pointer; }
   .knopf:hover { border-color: var(--akzent); }
-  .knopf.haupt { background: var(--akzent); border-color: var(--akzent); color: var(--akzent-tinte); font-weight: 600; padding: 0.6rem 1.2rem; justify-self: start; }
+  .knopf:disabled { opacity: 0.5; cursor: default; }
+  .knopf.haupt { background: var(--akzent); border-color: var(--akzent); color: var(--akzent-tinte); font-weight: 600; min-width: 6.5rem; }
   .eindruecke { display: flex; flex-wrap: wrap; gap: 0.4rem; }
   .eindruck { display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--linie); border-radius: 999px; padding: 0.1rem 0.25rem 0.1rem 0.65rem; font-size: 0.85rem; }
-  .eindruck button { border: 0; background: none; cursor: pointer; padding: 0 0.35rem; color: var(--leise); font-size: 1rem; line-height: 1; }
+  .eindruck button, .anstehend button { border: 0; background: none; cursor: pointer; padding: 0 0.35rem; color: var(--leise); }
+  .eindruck button { font-size: 1rem; line-height: 1; }
+  .anstehend button { text-decoration: underline; font-size: 0.85rem; }
 
   /* Verlauf */
-  .verlauf ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; max-height: 26rem; overflow-y: auto; }
+  .verlauf ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; max-height: 30rem; overflow-y: auto; }
   .verlauf li { border-top: 1px solid var(--linie); padding-top: 0.5rem; display: grid; gap: 0.15rem; font-size: 0.88rem; }
   .verlauf li:first-child { border-top: 0; padding-top: 0; }
   .verlauf .wann { font-weight: 600; }
@@ -148,15 +165,29 @@
   dl { margin: 0; display: grid; gap: 0.5rem; }
   dt { font-weight: 600; }
   dd { margin: 0; color: var(--leise); }
-  @media (prefers-reduced-motion: no-preference) { .fuellung, .zeiger { transition: width 0.25s ease, left 0.25s ease; } }
+  @media (prefers-reduced-motion: no-preference) { .fuellung, .zeiger, .messer span { transition: width 0.4s ease, left 0.4s ease; } }
 </style>
 
 <div class="seite">
   <header class="kopf">
     <h1>Geistmodell</h1>
-    <span class="moment" id="moment"></span>
     <span class="beispiel" id="beispielhinweis"></span>
   </header>
+
+  <div class="uhr" id="uhr" role="group" aria-label="Zeit">
+    <span class="stand"><span id="moment"></span><small id="zustand"></small></span>
+    <button class="knopf haupt" id="lauf" type="button">Anhalten</button>
+    <button class="knopf" id="schritt" type="button">Ein Moment weiter</button>
+    <label><span class="etikett">Tempo</span>
+      <select id="tempo">
+        <option value="4000">langsam</option>
+        <option value="2000" selected>normal</option>
+        <option value="800">schnell</option>
+      </select>
+    </label>
+    <label class="hinweis"><input type="checkbox" id="anhalten" checked> anhalten, wenn ich mitgerissen werde</label>
+    <span class="tasten"><kbd>Leertaste</kbd> anhalten · <kbd>.</kbd> ein Moment</span>
+  </div>
 
   <section class="tafel haltung" aria-labelledby="haltung-titel">
     <div class="spektrum">
@@ -189,7 +220,7 @@
           <span class="etikett zahl">Stärke</span>
         </div>
         <ul id="impulse"></ul>
-        <p class="hinweis">Links das unbewusste Feld des AUI, rechts das bewusste der ABI. Ein Balken, der über die Grenze reicht, taucht in der ABI auf. Nur damit kannst du umgehen.</p>
+        <p class="hinweis">Links das unbewusste Feld des AUI, rechts das bewusste der ABI. Ein Balken, der über die Grenze reicht, taucht in der ABI auf. Nur damit kannst du umgehen. Dein Umgang gilt in jedem Moment weiter, bis du ihn änderst oder das Thema aus der ABI verschwindet.</p>
       </section>
 
       <section class="tafel" aria-labelledby="tun-titel">
@@ -201,12 +232,14 @@
           <label id="neues-gebiet-feld" hidden><span class="etikett">Themengebiet</span>
             <input type="text" id="neues-gebiet" placeholder="zum Beispiel Urlaub" autocomplete="off">
           </label>
+          <button class="knopf" id="ausrichten" type="button">Ausrichten</button>
         </div>
-        <p class="hinweis">Ein Themenwechsel verstärkt nichts im AUI und macht deine Haltung heilsamer. Den Umgang mit einzelnen Themen wählst du oben bei jedem Thema.</p>
+        <p class="hinweis anstehend" id="anstehend"></p>
+        <p class="hinweis">Sich auszurichten gilt einmal, im nächsten Moment. Es verstärkt nichts im AUI und macht deine Haltung heilsamer, auch wenn du bei deinem jetzigen Gebiet bleibst.</p>
       </section>
 
       <section class="tafel" aria-labelledby="erleben-titel">
-        <header><h2 id="erleben-titel">Was erlebst du im nächsten Moment?</h2></header>
+        <header><h2 id="erleben-titel">Was erlebst du?</h2></header>
         <form class="reihe" id="eindruck-formular">
           <label><span class="etikett">Gebiet</span>
             <select id="eindruck-gebiet">
@@ -221,13 +254,11 @@
           <label><span class="etikett">Stärke <output id="eindruck-wert" for="eindruck-staerke">0,50</output></span>
             <input type="range" id="eindruck-staerke" min="0.05" max="1" step="0.05" value="0.5">
           </label>
+          <label class="haken hinweis"><input type="checkbox" id="eindruck-dauerhaft" checked> in jedem Moment</label>
           <button class="knopf" type="submit" id="eindruck-dazu">Hinzufügen</button>
         </form>
         <div class="eindruecke" id="eindruecke"></div>
-        <label class="reihe hinweis"><input type="checkbox" id="behalten"> Dasselbe in jedem weiteren Moment erleben</label>
       </section>
-
-      <button class="knopf haupt" id="weiter" type="button">Nächster Moment</button>
     </div>
 
     <div class="stapel">
@@ -263,7 +294,7 @@
               <div><dt>ABI, automatische bewusste Intention</dt><dd>Das angrenzende Feld. Was im AUI stark genug ist, taucht hier auf und wird wahrgenommen.</dd></div>
               <div><dt>MBI, manuelle bewusste Intention</dt><dd>Das bist du. Du gehst mit dem um, was in der ABI auftaucht, und richtest dich aus.</dd></div>
               <div><dt>Haltung</dt><dd>Das Gebiet, in dem du agierst: ein Themengebiet, die Sinne, die jetzige Erfahrung, die Erinnerung, die Emotion oder der Körper. Sie liegt zwischen heilsam und unheilsam.</dd></div>
-              <div><dt>engage und disengage</dt><dd>Verstärken oder schwächen ein Thema im AUI. Ohne Verlangen und Abneigung machen sie deine Haltung heilsamer.</dd></div>
+              <div><dt>engage und disengage</dt><dd>Verstärken oder schwächen ein Thema im AUI, in jedem Moment aufs Neue. Ohne Verlangen und Abneigung machen sie deine Haltung heilsamer.</dd></div>
               <div><dt>Verlangen und Abneigung</dt><dd>Engage aus Verlangen und disengage aus Abneigung wirken auf das Thema genauso, machen deine Haltung aber unheilsamer und das Thema negativ.</dd></div>
               <div><dt>lassen</dt><dd>Weder engage noch disengage. Das Thema kann dann von selbst zum Themengebiet werden oder verblassen. Ist es sehr stark, kann es dich mitreißen.</dd></div>
               <div><dt>Zufall</dt><dd>Was das AUI kennt, kann von selbst wieder aufkommen. Je unheilsamer deine Haltung, desto öfter Negatives und desto eher wirst du mitgerissen.</dd></div>
@@ -292,15 +323,14 @@
         { thema: "Sorge", staerke: 0.9, gebiete: ["Familie"] },
         { thema: "Mail", staerke: 0.5, gebiete: ["Arbeit"] },
       ],
-      eindruecke: [],
+      eindruecke: [{ gebiet: "sinne", thema: "Bürolärm", staerke: 0.15, dauerhaft: true }],
     },
     {
       name: "Unruhe am Abend",
       text: "Du bist im Gebiet der Emotion. In jedem Moment kommt neue Unruhe auf.",
       haltung: M.EMOTION,
       vorher: [],
-      eindruecke: [{ gebiet: "emotion", thema: "Unruhe", staerke: 0.3 }],
-      behalten: true,
+      eindruecke: [{ gebiet: "emotion", thema: "Unruhe", staerke: 0.3, dauerhaft: true }],
     },
     {
       name: "Beim Atem bleiben",
@@ -310,8 +340,7 @@
         { thema: "Ohrwurm", staerke: 0.7, gebiete: ["Alltag"] },
         { thema: "Sorge", staerke: 0.8, gebiete: ["Familie"] },
       ],
-      eindruecke: [{ gebiet: "sinne", thema: "Atem", staerke: 0.3 }],
-      behalten: true,
+      eindruecke: [{ gebiet: "sinne", thema: "Atem", staerke: 0.2, dauerhaft: true }],
     },
     { name: "Leer beginnen", text: "Nichts ist vorgegeben. Wähle deine Haltung und gib ein, was du erlebst.", haltung: "Alltag", vorher: [], eindruecke: [] },
   ];
@@ -323,11 +352,21 @@
     [U.VERLANGEN, "aus Verlangen", "unheilsam"],
     [U.ABNEIGUNG, "aus Abneigung", "unheilsam"],
   ];
+  const UMGANGSWORT = { [U.ENGAGE]: "engage", [U.DISENGAGE]: "disengage", [U.VERLANGEN]: "engage aus Verlangen", [U.ABNEIGUNG]: "disengage aus Abneigung" };
+  const LAENGSTER_VERLAUF = 80;
 
   let geist, lage, szenario;
-  let wahl = new Map();     // Thema -> gewählter Umgang in diesem Moment
-  let eindruecke = [];      // was im nächsten Moment erlebt wird
-  let verlauf = [];         // abgeschlossene Momente, neuester zuerst
+  let wahl = new Map();          // Thema -> Umgang, gilt in jedem Moment weiter
+  let anstehend = null;          // Gebiet, auf das du dich im nächsten Moment richtest
+  let eindruecke = [];           // was du erlebst: einmal oder in jedem Moment
+  let verlauf = [];              // was geschehen ist, neuestes zuerst
+  let reihenfolge = [];          // Themen in der Reihenfolge, in der sie zuerst da waren
+  const zeilen = new Map();      // Thema -> seine Zeile in der Anzeige
+  let zeilennummer = 0;
+  let laeuft = true;
+  let uhr = null;
+  let letzter_umgang = "";
+  let gebiete_in_auswahl = null;
 
   const zahl = (wert) => wert.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const prozent = (wert) => Math.round(wert * 100) + " %";
@@ -349,17 +388,57 @@
     return knoten;
   }
 
-  function sammle_eindruecke() {
-    const erlebtes = { sinne: {}, emotion: {}, koerper: {} };
-    for (const e of eindruecke) erlebtes[e.gebiet][e.thema] = e.staerke;
-    return erlebtes;
-  }
+  // --- Der Ablauf eines Moments ---
 
   function beginne() {
-    const erlebtes = sammle_eindruecke();
+    const erlebtes = { sinne: {}, emotion: {}, koerper: {} };
+    for (const e of eindruecke) erlebtes[e.gebiet][e.thema] = e.staerke;
     lage = geist.beginne(erlebtes.sinne, erlebtes.emotion, erlebtes.koerper);
-    if (!$("behalten").checked) eindruecke = [];
-    wahl = new Map();
+    eindruecke = eindruecke.filter((e) => e.dauerhaft);
+    // Ein Umgang endet, wenn sein Thema nicht mehr in der ABI auftaucht.
+    const im_abi = new Set(lage.abi_feld.map((i) => i.thema));
+    for (const thema of [...wahl.keys()]) if (!im_abi.has(thema)) wahl.delete(thema);
+  }
+
+  function halte_fest(moment, wechsel) {
+    const ereignisse = [];
+    const umgang = [...wahl]
+      .filter(([, art]) => art !== U.WEDER_NOCH)
+      .map(([thema, art]) => UMGANGSWORT[art] + " zu " + thema)
+      .join(", ");
+    if (umgang !== letzter_umgang) ereignisse.push({ text: "Dein Umgang ab jetzt: " + (umgang || "alles lassen") });
+    letzter_umgang = umgang;
+    if (wechsel) {
+      const erhalt = moment.gebiete.length === 1 && moment.gebiete[0] === wechsel;
+      ereignisse.push({ text: erhalt ? "Themenerhalt: Du bleibst bei " + benenne(wechsel) : "Themenwechsel: " + benenne(wechsel), art: "heilsam" });
+    }
+    if (moment.aufgekommen.length) ereignisse.push({ text: "Im AUI von selbst aufgekommen: " + moment.aufgekommen.join(", ") });
+    for (const thema of moment.mitgerissen) ereignisse.push({ text: "Zu stark: Du richtest dich aus Verlangen auf " + thema, art: "unheilsam" });
+    if (moment.verdraengt.length) ereignisse.push({ text: "Zu viel für dich, verdrängt wird: " + benenne_alle(moment.verdraengt) });
+    if (moment.gebiete_danach.join("|") !== moment.gebiete.join("|")) ereignisse.push({ text: "Neue Haltung: " + benenne_alle(moment.gebiete_danach) });
+    for (const g of moment.gebiete_ohne_mbi_danach) if (!moment.gebiete_ohne_mbi.includes(g)) ereignisse.push({ text: "Ohne dich wird zum Themengebiet: " + g });
+    for (const g of moment.gebiete_ohne_mbi) {
+      if (!moment.gebiete_ohne_mbi_danach.includes(g) && !moment.gebiete_danach.includes(g)) ereignisse.push({ text: "Themengebiet ohne dich löst sich auf: " + g });
+    }
+    // Die Haltung bewegt sich oft in jedem Moment. Festgehalten wird, wenn sie die Seite wechselt oder ein Ende erreicht.
+    const vorher = moment.heilsamkeit;
+    const nachher = moment.heilsamkeit_danach;
+    if (nachher !== vorher && (Math.sign(nachher) !== Math.sign(vorher) || Math.abs(nachher) === 1)) {
+      ereignisse.push({ text: "Deine Haltung ist jetzt " + nenne_haltung(nachher), art: nachher > vorher ? "heilsam" : "unheilsam" });
+    }
+    if (!ereignisse.length) return;
+    verlauf.unshift({ zeit: moment.zeit, haltung: benenne_alle(moment.gebiete), ereignisse });
+    verlauf.length = Math.min(verlauf.length, LAENGSTER_VERLAUF);
+  }
+
+  function naechster_moment() {
+    const wechsel = anstehend;
+    anstehend = null;
+    const moment = geist.entscheide({ umgang: Object.fromEntries(wahl), themenwechsel: wechsel });
+    halte_fest(moment, wechsel);
+    beginne();
+    zeichne();
+    if (moment.mitgerissen.length && $("anhalten").checked) setze_lauf(false);
   }
 
   function starte(neues_szenario, haltung) {
@@ -367,111 +446,128 @@
     geist = new M.Geist(haltung || szenario.haltung);
     for (const e of szenario.vorher) geist.unterbewusstsein.erlebe({ ...e, zeit: 0 });
     eindruecke = szenario.eindruecke.map((e) => ({ ...e }));
-    $("behalten").checked = Boolean(szenario.behalten);
+    wahl = new Map();
+    anstehend = null;
     verlauf = [];
+    reihenfolge = [];
+    letzter_umgang = "";
+    gebiete_in_auswahl = null;
+    zeilen.clear();
+    $("impulse").replaceChildren();
     beginne();
     zeichne();
   }
 
-  function lies_themenwechsel() {
-    const wert = $("themenwechsel").value;
-    if (wert === "") return null;
-    if (wert === "neu") return $("neues-gebiet").value.trim() || null;
-    return wert;
+  // --- Die Uhr ---
+
+  function stelle_uhr() {
+    clearInterval(uhr);
+    uhr = null;
+    if (laeuft && !document.hidden) uhr = setInterval(naechster_moment, Number($("tempo").value));
+  }
+  function setze_lauf(an) {
+    laeuft = an;
+    stelle_uhr();
+    zeichne_uhr();
+  }
+  function zeichne_uhr() {
+    $("moment").textContent = "Moment " + lage.zeit;
+    $("zustand").textContent = laeuft ? "die Zeit läuft" : "angehalten";
+    $("lauf").textContent = laeuft ? "Anhalten" : "Weiterlaufen";
+    $("uhr").classList.toggle("steht", !laeuft);
+    $("schritt").disabled = laeuft;
   }
 
-  function beschreibe(moment, entscheidung) {
-    const ereignisse = [];
-    const getan = Object.entries(moment.umgang)
-      .filter(([thema, art]) => art !== U.WEDER_NOCH && !moment.mitgerissen.includes(thema))
-      .map(([thema, art]) => (art === U.VERLANGEN ? "engage aus Verlangen" : art === U.ABNEIGUNG ? "disengage aus Abneigung" : art) + " zu " + thema);
-    if (entscheidung.themenwechsel) {
-      const erhalt = moment.gebiete.length === 1 && moment.gebiete[0] === entscheidung.themenwechsel;
-      getan.push(erhalt ? "Themenerhalt" : "Themenwechsel: " + benenne(entscheidung.themenwechsel));
-    }
-    ereignisse.push({ text: "Du: " + (getan.length ? getan.join(", ") : "nichts getan") });
-    if (moment.aufgekommen.length) ereignisse.push({ text: "Im AUI von selbst aufgekommen: " + moment.aufgekommen.join(", ") });
-    for (const thema of moment.mitgerissen) ereignisse.push({ text: "Zu stark: Du richtest dich aus Verlangen auf " + thema, art: "unheilsam" });
-    if (moment.heilsamkeit_danach !== moment.heilsamkeit) {
-      const heilsamer = moment.heilsamkeit_danach > moment.heilsamkeit;
-      ereignisse.push({ text: "Haltung wird " + (heilsamer ? "heilsamer" : "unheilsamer") + ": " + nenne_haltung(moment.heilsamkeit_danach), art: heilsamer ? "heilsam" : "unheilsam" });
-    }
-    if (moment.verdraengt.length) ereignisse.push({ text: "Zu viel für dich, verdrängt wird: " + benenne_alle(moment.verdraengt) });
-    if (moment.gebiete_danach.join("|") !== moment.gebiete.join("|")) ereignisse.push({ text: "Neue Haltung: " + benenne_alle(moment.gebiete_danach) });
-    for (const g of moment.gebiete_ohne_mbi_danach) if (!moment.gebiete_ohne_mbi.includes(g)) ereignisse.push({ text: "Ohne dich wird zum Themengebiet: " + g });
-    for (const g of moment.gebiete_ohne_mbi) {
-      if (!moment.gebiete_ohne_mbi_danach.includes(g) && !moment.gebiete_danach.includes(g)) ereignisse.push({ text: "Themengebiet ohne dich löst sich auf: " + g });
-    }
-    return { zeit: moment.zeit, haltung: benenne_alle(moment.gebiete), ereignisse };
-  }
+  // --- Die Anzeige ---
 
-  function weiter() {
-    const entscheidung = { umgang: Object.fromEntries(wahl), themenwechsel: lies_themenwechsel() };
-    const moment = geist.entscheide(entscheidung);
-    verlauf.unshift(beschreibe(moment, entscheidung));
-    $("neues-gebiet").value = "";
-    beginne();
-    zeichne();
+  function zeile_fuer(thema) {
+    if (zeilen.has(thema)) return zeilen.get(thema);
+    const nummer = zeilennummer++;
+    const marken = el("span", { class: "marken" });
+    const fuellung = el("span", { class: "fuellung" });
+    const balken = el("div", { class: "balken", role: "img" }, [fuellung]);
+    const wert = el("span", { class: "zahl" });
+    const gruppe = el("div", { class: "umgang", role: "radiogroup", "aria-label": "Umgang mit " + thema });
+    const knoepfe = UMGANG.map(([art, wort, klasse], stelle) => {
+      const knopf = el("input", { type: "radio", name: "umgang-" + nummer, id: "umgang-" + nummer + "-" + stelle, value: art });
+      knopf.addEventListener("change", () => {
+        if (art === U.WEDER_NOCH) wahl.delete(thema);
+        else wahl.set(thema, art);
+      });
+      gruppe.append(el("label", { class: klasse }, [knopf, el("span", { text: wort })]));
+      return knopf;
+    });
+    const eintrag = el("li", { class: "impuls" }, [
+      el("div", { class: "name" }, [el("span", { text: thema }), marken]),
+      el("div", { class: "zeile" }, [balken, wert]),
+      gruppe,
+    ]);
+    const zeile = { eintrag, marken, fuellung, balken, wert, gruppe, knoepfe };
+    zeilen.set(thema, zeile);
+    return zeile;
   }
 
   function zeichne_felder() {
     const liste = $("impulse");
-    liste.replaceChildren();
     const im_abi = new Set(lage.abi_feld.map((i) => i.thema));
-    if (!lage.aui_feld.length) {
-      liste.append(el("li", { class: "impuls hinweis", text: "Im AUI liegt gerade nichts. Gib unten ein, was du erlebst." }));
+    const da = new Map(lage.aui_feld.map((i) => [i.thema, i]));
+    for (const thema of da.keys()) if (!reihenfolge.includes(thema)) reihenfolge.push(thema);
+    for (const [thema, zeile] of zeilen) {
+      if (!da.has(thema)) { zeile.eintrag.remove(); zeilen.delete(thema); }
     }
-    lage.aui_feld.forEach((impuls, reihe) => {
-      const da = im_abi.has(impuls.thema);
+
+    // Die Zeilen bleiben an ihrem Platz, damit man sie bei laufender Zeit treffen kann.
+    let stelle = 0;
+    for (const thema of reihenfolge) {
+      const impuls = da.get(thema);
+      if (!impuls) continue;
+      const zeile = zeile_fuer(thema);
+      const in_abi = im_abi.has(thema);
       const klassen = ["impuls"];
-      if (da) klassen.push("im-abi");
+      if (in_abi) klassen.push("im-abi");
       if (impuls.haltung) klassen.push("fruehere-haltung");
       if (impuls.faerbung < 0) klassen.push("negativ");
       if (impuls.faerbung > 0) klassen.push("heilsam");
+      zeile.eintrag.className = klassen.join(" ");
 
-      const name = el("div", { class: "name" }, [el("span", { text: impuls.thema })]);
-      if (lage.gebiete.includes(impuls.thema)) name.append(el("span", { class: "marke gebiet", text: "deine Haltung" }));
-      else if (lage.gebiete_ohne_mbi.includes(impuls.thema)) name.append(el("span", { class: "marke gebiet", text: "Themengebiet ohne dich" }));
-      if (impuls.haltung) name.append(el("span", { class: "marke", text: "frühere Haltung" }));
-      if (impuls.mitgebracht_aus.length) name.append(el("span", { class: "marke", text: "mitgebracht aus " + impuls.mitgebracht_aus.join(", ") }));
-      if (impuls.gewohnheit) name.append(el("span", { class: "marke", text: "Gewohnheit " + (impuls.gewohnheit > 0 ? "+" : "−") + Math.abs(impuls.gewohnheit) }));
-      if (impuls.faerbung < 0) name.append(el("span", { class: "marke negativ", text: "negativ" }));
-      if (impuls.faerbung > 0) name.append(el("span", { class: "marke heilsam", text: "heilsam" }));
-      const sog = da ? geist.manuell.sogchance(impuls.staerke, lage.heilsamkeit) : 0;
-      if (sog > 0) name.append(el("span", { class: "marke sog", text: "reißt dich mit " + prozent(sog) + " mit, wenn du es lässt" }));
+      const marken = [];
+      const marke = (text, klasse = "") => marken.push(el("span", { class: "marke " + klasse, text }));
+      if (lage.gebiete.includes(thema)) marke("deine Haltung", "gebiet");
+      else if (lage.gebiete_ohne_mbi.includes(thema)) marke("Themengebiet ohne dich", "gebiet");
+      if (impuls.haltung) marke("frühere Haltung");
+      if (impuls.mitgebracht_aus.length) marke("mitgebracht aus " + impuls.mitgebracht_aus.join(", "));
+      if (impuls.gewohnheit) marke("Gewohnheit " + (impuls.gewohnheit > 0 ? "+" : "−") + Math.abs(impuls.gewohnheit));
+      if (impuls.faerbung < 0) marke("negativ", "negativ");
+      if (impuls.faerbung > 0) marke("heilsam", "heilsam");
+      const sog = in_abi && !wahl.has(thema) ? geist.manuell.sogchance(impuls.staerke, lage.heilsamkeit) : 0;
+      if (sog > 0) marke("reißt dich mit " + prozent(sog) + " mit, wenn du es lässt", "sog");
+      zeile.marken.replaceChildren(...marken);
 
-      const fuellung = el("span", { class: "fuellung" });
-      fuellung.style.width = Math.round(impuls.staerke * 100) + "%";
-      const zeile = el("div", { class: "zeile" }, [
-        el("div", { class: "balken", role: "img", "aria-label": impuls.thema + ", Stärke " + zahl(impuls.staerke) + (da ? ", im Feld der ABI" : ", nur im Feld des AUI") }, [fuellung]),
-        el("span", { class: "zahl", text: zahl(impuls.staerke) }),
-      ]);
-      const eintrag = el("li", { class: klassen.join(" ") }, [name, zeile]);
+      zeile.fuellung.style.width = Math.round(impuls.staerke * 100) + "%";
+      zeile.balken.setAttribute("aria-label", thema + ", Stärke " + zahl(impuls.staerke) + (in_abi ? ", im Feld der ABI" : ", nur im Feld des AUI"));
+      zeile.wert.textContent = zahl(impuls.staerke);
+      zeile.gruppe.hidden = !in_abi;
+      const gewaehlt = wahl.get(thema) || U.WEDER_NOCH;
+      for (const knopf of zeile.knoepfe) knopf.checked = knopf.value === gewaehlt;
 
-      if (da) {
-        const gruppe = el("div", { class: "umgang", role: "radiogroup", "aria-label": "Umgang mit " + impuls.thema });
-        const gewaehlt = wahl.get(impuls.thema) || U.WEDER_NOCH;
-        UMGANG.forEach(([art, wort, klasse], stelle) => {
-          const knopf = el("input", { type: "radio", name: "umgang-" + reihe, id: "umgang-" + reihe + "-" + stelle, value: art });
-          knopf.checked = art === gewaehlt;
-          knopf.addEventListener("change", () => wahl.set(impuls.thema, art));
-          gruppe.append(el("label", { class: klasse }, [knopf, el("span", { text: wort })]));
-        });
-        eintrag.append(gruppe);
-      }
-      liste.append(eintrag);
-    });
+      if (liste.children[stelle] !== zeile.eintrag) liste.insertBefore(zeile.eintrag, liste.children[stelle] || null);
+      stelle++;
+    }
+    let leer = $("leer");
+    if (!da.size && !leer) {
+      leer = el("li", { class: "impuls hinweis", id: "leer", text: "Im AUI liegt gerade nichts. Gib unten ein, was du erlebst." });
+      liste.append(leer);
+    } else if (da.size && leer) leer.remove();
     $("aufgekommen").textContent = lage.aufgekommen.length ? "Gerade von selbst aufgekommen: " + lage.aufgekommen.join(", ") : "";
   }
 
   function zeichne_haltung() {
-    const gebiete = $("gebiete");
-    gebiete.replaceChildren();
-    for (const g of lage.gebiete) {
-      gebiete.append(el("span", { class: "marke gebiet", text: benenne(g) + " · Einfluss " + prozent(lage.einfluss[g] || 0) }));
-    }
+    $("gebiete").replaceChildren(
+      ...lage.gebiete.map((g) => el("span", { class: "marke gebiet", text: benenne(g) + " · Einfluss " + prozent(lage.einfluss[g] || 0) }))
+    );
     $("ohne-dich").textContent = lage.gebiete_ohne_mbi.length ? "Ohne dich entstanden: " + benenne_alle(lage.gebiete_ohne_mbi) : "";
     $("zeiger").style.left = (lage.heilsamkeit + 1) * 50 + "%";
+    $("zeiger").parentElement.setAttribute("aria-label", "Haltung: " + nenne_haltung(lage.heilsamkeit));
     $("haltung-wort").textContent = nenne_haltung(lage.heilsamkeit);
 
     const aui = geist.unterbewusstsein;
@@ -480,53 +576,97 @@
     $("kapazitaet").firstElementChild.style.width = Math.round(anteil * 100) + "%";
     $("kapazitaet").classList.toggle("voll", anteil >= 1);
     $("kapazitaet-wort").textContent = prozent(anteil) + ". Ist sie voll und hältst du mehrere Gebiete, wird das schwächste verdrängt.";
-    $("zeiger").parentElement.setAttribute("aria-label", "Haltung: " + nenne_haltung(lage.heilsamkeit));
   }
 
-  function zeichne_themenwechsel() {
+  function zeichne_ausrichtung() {
     const auswahl = $("themenwechsel");
-    auswahl.replaceChildren(el("option", { value: "", text: "nichts tun" }));
-    for (const g of lage.gebiete) auswahl.append(el("option", { value: g, text: "Themenerhalt: bei " + benenne(g) + " bleiben" }));
-    for (const g of M.BESONDERE_GEBIETE) if (!lage.gebiete.includes(g)) auswahl.append(el("option", { value: g, text: "Themenwechsel: " + g }));
-    auswahl.append(el("option", { value: "neu", text: "Themenwechsel: anderes Themengebiet" }));
-    auswahl.value = "";
-    $("neues-gebiet-feld").hidden = true;
+    const schluessel = lage.gebiete.join("|");
+    // Die Auswahl nur neu aufbauen, wenn sich die Haltung geändert hat und gerade niemand darin wählt.
+    if (schluessel !== gebiete_in_auswahl && document.activeElement !== auswahl) {
+      const vorher = auswahl.value;
+      auswahl.replaceChildren();
+      for (const g of lage.gebiete) auswahl.append(el("option", { value: g, text: "Themenerhalt: bei " + benenne(g) + " bleiben" }));
+      for (const g of M.BESONDERE_GEBIETE) if (!lage.gebiete.includes(g)) auswahl.append(el("option", { value: g, text: "Themenwechsel: " + g }));
+      auswahl.append(el("option", { value: "neu", text: "Themenwechsel: anderes Themengebiet" }));
+      if ([...auswahl.options].some((o) => o.value === vorher)) auswahl.value = vorher;
+      gebiete_in_auswahl = schluessel;
+    }
+    const ort = $("anstehend");
+    ort.replaceChildren();
+    if (anstehend) {
+      const zurueck = el("button", { type: "button", text: "zurücknehmen" });
+      zurueck.addEventListener("click", () => { anstehend = null; zeichne_ausrichtung(); });
+      const erhalt = lage.gebiete.length === 1 && lage.gebiete[0] === anstehend;
+      ort.append("Im nächsten Moment: " + (erhalt ? "Themenerhalt, du bleibst bei " : "Themenwechsel, ") + benenne(anstehend) + ". ", zurueck);
+    }
   }
 
   function zeichne_eindruecke() {
     const ort = $("eindruecke");
+    // Nur neu aufbauen, wenn sich etwas geändert hat: Sonst verfehlt man bei laufender Zeit das ×.
+    const stand = JSON.stringify(eindruecke);
+    if (ort.dataset.stand === stand) return;
+    ort.dataset.stand = stand;
     ort.replaceChildren();
-    if (!eindruecke.length) ort.append(el("span", { class: "hinweis", text: "Noch nichts. Ohne Eingabe erlebst du im nächsten Moment nichts Neues." }));
+    if (!eindruecke.length) ort.append(el("span", { class: "hinweis", text: "Gerade nichts. Ohne Eingabe erlebst du nichts Neues." }));
     eindruecke.forEach((e, stelle) => {
       const weg = el("button", { type: "button", "aria-label": e.thema + " entfernen", text: "×" });
       weg.addEventListener("click", () => { eindruecke.splice(stelle, 1); zeichne_eindruecke(); });
-      ort.append(el("span", { class: "eindruck" }, [el("span", { text: GEBIETSNAMEN[e.gebiet] + ": " + e.thema + " " + zahl(e.staerke) }), weg]));
+      const text = GEBIETSNAMEN[e.gebiet] + ": " + e.thema + " " + zahl(e.staerke) + (e.dauerhaft ? " · in jedem Moment" : " · einmal");
+      ort.append(el("span", { class: "eindruck" }, [el("span", { text }), weg]));
     });
   }
 
   function zeichne_verlauf() {
     const ort = $("verlauf");
+    // Nur neu aufbauen, wenn etwas dazugekommen ist: Sonst springt die Liste beim Lesen zurück.
+    const stand = verlauf.length + ":" + (verlauf[0] ? verlauf[0].zeit : "");
+    if (ort.dataset.stand === stand) return;
+    ort.dataset.stand = stand;
     ort.replaceChildren();
-    if (!verlauf.length) ort.append(el("li", { class: "hinweis", text: "Hier steht, was in jedem abgeschlossenen Moment geschehen ist." }));
+    if (!verlauf.length) ort.append(el("li", { class: "hinweis", text: "Hier steht, was geschieht: was von selbst aufkommt, was dich mitreißt, wie sich deine Haltung ändert." }));
     for (const eintrag of verlauf) {
-      const zeilen = eintrag.ereignisse.map((e) => el("span", { class: "ereignis " + (e.art || ""), text: e.text }));
-      ort.append(el("li", {}, [el("span", { class: "wann", text: "Moment " + eintrag.zeit + " · " + eintrag.haltung }), ...zeilen]));
+      const ereignisse = eintrag.ereignisse.map((e) => el("span", { class: "ereignis " + (e.art || ""), text: e.text }));
+      ort.append(el("li", {}, [el("span", { class: "wann", text: "Moment " + eintrag.zeit + " · " + eintrag.haltung }), ...ereignisse]));
     }
   }
 
   function zeichne() {
-    $("moment").textContent = "Moment " + lage.zeit;
     $("beispielhinweis").textContent = "Beispiel: " + szenario.name;
+    zeichne_uhr();
     zeichne_felder();
     zeichne_haltung();
-    zeichne_themenwechsel();
+    zeichne_ausrichtung();
     zeichne_eindruecke();
     zeichne_verlauf();
   }
 
-  // Eingaben
-  $("weiter").addEventListener("click", weiter);
+  // --- Bedienung ---
+
+  $("lauf").addEventListener("click", () => setze_lauf(!laeuft));
+  $("schritt").addEventListener("click", naechster_moment);
+  $("tempo").addEventListener("change", stelle_uhr);
+  document.addEventListener("visibilitychange", stelle_uhr);
+  document.addEventListener("keydown", (ereignis) => {
+    const ziel = ereignis.target;
+    if (ereignis.ctrlKey || ereignis.metaKey || ereignis.altKey) return;
+    if (ziel instanceof HTMLElement && ziel.matches("input, select, textarea, button, summary")) return;
+    if (ereignis.key === " ") { ereignis.preventDefault(); setze_lauf(!laeuft); }
+    else if (ereignis.key === "." && !laeuft) naechster_moment();
+  });
+
   $("themenwechsel").addEventListener("change", () => { $("neues-gebiet-feld").hidden = $("themenwechsel").value !== "neu"; });
+  $("ausrichten").addEventListener("click", () => {
+    let ziel = $("themenwechsel").value;
+    if (ziel === "neu") {
+      ziel = $("neues-gebiet").value.trim();
+      if (!ziel) { $("neues-gebiet").focus(); return; }
+      $("neues-gebiet").value = "";
+    }
+    anstehend = ziel;
+    zeichne_ausrichtung();
+  });
+
   $("eindruck-staerke").addEventListener("input", () => { $("eindruck-wert").textContent = zahl(Number($("eindruck-staerke").value)); });
   $("eindruck-formular").addEventListener("submit", (ereignis) => {
     ereignis.preventDefault();
@@ -534,7 +674,7 @@
     if (!thema) { $("eindruck-thema").focus(); return; }
     const gebiet = $("eindruck-gebiet").value;
     eindruecke = eindruecke.filter((e) => !(e.gebiet === gebiet && e.thema === thema));
-    eindruecke.push({ gebiet, thema, staerke: Number($("eindruck-staerke").value) });
+    eindruecke.push({ gebiet, thema, staerke: Number($("eindruck-staerke").value), dauerhaft: $("eindruck-dauerhaft").checked });
     $("eindruck-thema").value = "";
     zeichne_eindruecke();
   });
@@ -550,9 +690,11 @@
   $("neu").addEventListener("click", () => {
     starte(SZENARIEN[Number(szenarioauswahl.value)], $("start-haltung").value.trim());
     $("neu-beginnen").open = false;
+    setze_lauf(true);
   });
 
   zeige_szenario();
   starte(SZENARIEN[0]);
+  stelle_uhr();
 })();
 </script>

@@ -26,8 +26,10 @@ Braucht nur Python 3.10 oder neuer, für die Tests zusätzlich pytest.
 ## Im Browser
 
 `web/index.html` ist dieselbe Simulation zum Anklicken, gedacht für Übende: Man
-sieht die beiden Felder, die eigene Haltung und den Verlauf und wählt in jedem
-Moment, wie man mit dem umgeht, was auftaucht. `web/geist.js` ist das Modell
+sieht die beiden Felder, die eigene Haltung und den Verlauf. Die Zeit läuft von
+selbst, Moment für Moment, und lässt sich anhalten, schrittweise weiterschalten
+und im Tempo verstellen. Wie man mit einem Thema umgeht, gilt in jedem Moment
+weiter, bis man es ändert. Sich auszurichten gilt einmal. `web/geist.js` ist das Modell
 dafür, eine Übertragung von `geist/modell.py`. `tests/test_web.py` spielt
 zufällige Abläufe in beiden Fassungen durch und vergleicht jeden Moment; der
 Test braucht Node und wird ohne übersprungen.
